@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import simpledialog, filedialog
 from tkinter import ttk, font as tkfont
+import ctypes
 import os
 import time
 from docx import Document
@@ -22,9 +23,10 @@ class Application(tk.Tk):
             "Cattedrale[RUSbypenka220]-Regular.ttf",
         )
 
-        # Настройка шрифта
-        default_size = tkfont.nametofont("TkDefaultFont").cget("size")
-        custom_font = tkfont.Font(file=font_path, family="Cattedrale", size=default_size)
+        # Регистрация и настройка шрифта
+        ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
+        default_font = tkfont.nametofont("TkDefaultFont")
+        custom_font = tkfont.Font(family="Cattedrale", size=default_font.cget("size"))
         self.option_add("*Font", custom_font)
 
         # Стиль для виджетов
@@ -38,7 +40,7 @@ class Application(tk.Tk):
         self.style.configure("TEntry",
                              foreground="#303030",  # Темно-серый текст в поле ввода
                              background="#ffffff",  # Белое поле ввода
-                             font=("Arial", default_size),  # Шрифт по умолчанию для поля ввода
+                             font=default_font,  # Шрифт по умолчанию для поля ввода
                              fieldbackground="#ffffff")
 
         self.style.map("TButton", background=[("active", "#2AD1A3")])  # Цвет кнопки при наведении (неон бирюзово-зеленый)
@@ -61,7 +63,8 @@ class Application(tk.Tk):
         self.frame.pack(padx=20, pady=20, expand=True, fill="both")
 
         # Создаем метку
-        self.label = tk.Label(self.frame, text="Генератор Глав", fg="#eeeeee", bg="#2f2f2f", font=("Cattedrale", 16, "bold"))
+        header_font = tkfont.Font(family=custom_font.actual("family"), size=16, weight="bold")
+        self.label = tk.Label(self.frame, text="Генератор Глав", fg="#eeeeee", bg="#2f2f2f", font=header_font)
         self.label.pack(pady=20)
 
         # Кнопки для взаимодействия
@@ -69,7 +72,7 @@ class Application(tk.Tk):
         self.ask_button.pack(pady=10)
 
         # Поле для ввода пути с кнопкой
-        self.path_label = tk.Label(self.frame, text="Выберите путь для сохранения:", fg="#eeeeee", bg="#2f2f2f", font=("Arial", 12))
+        self.path_label = tk.Label(self.frame, text="Выберите путь для сохранения:", fg="#eeeeee", bg="#2f2f2f")
         self.path_label.pack(pady=10)
 
         self.path_entry = ttk.Entry(self.frame)
@@ -129,7 +132,7 @@ class Application(tk.Tk):
         popup.title("Результат")
         popup.configure(bg="#2f2f2f")
 
-        label = tk.Label(popup, text=message, fg=color, bg="#2f2f2f", font=("Arial", 12))
+        label = tk.Label(popup, text=message, fg=color, bg="#2f2f2f")
         label.pack(pady=20)
 
         close_button = ttk.Button(popup, text="Закрыть", command=popup.destroy, style="TButton")
