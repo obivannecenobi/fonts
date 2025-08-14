@@ -17,7 +17,11 @@ class Application(tk.Tk):
         self.resizable(False, False)  # Запрещаем изменение размера окна
 
         # Путь к вашему шрифту
-        font_path = "C:/Users/Asmodey/Downloads/blet_program/fonts/Cattedrale[RUSbypenka220]-Regular.ttf"
+        font_path = os.path.join(
+            os.path.dirname(__file__),
+            "fonts",
+            "Cattedrale[RUSbypenka220]-Regular.ttf",
+        )
 
         # Настройка шрифта
         custom_font = ImageFont.truetype(font_path, 12)
