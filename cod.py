@@ -1,19 +1,22 @@
 import tkinter as tk
 from tkinter import simpledialog, filedialog
-from tkinter import ttk, font as tkfont
+from tkinter import font as tkfont
+import customtkinter as ctk
 import ctypes
 import os
 import time
 from docx import Document
 
-class Application(tk.Tk):
+class Application(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        ctk.set_appearance_mode("dark")
 
         # Создаем окно перед настройкой шрифта
         self.title("Генератор Глав")
         self.geometry("500x400")  # Размер окна
-        self.configure(bg="#2f2f2f")  # Темно-серый фон
+        self.configure(fg_color="#2f2f2f")  # Темно-серый фон
         self.resizable(False, False)  # Запрещаем изменение размера окна
 
         # Путь к вашему шрифту
@@ -32,63 +35,47 @@ class Application(tk.Tk):
         )
         self.option_add("*Font", custom_font)
 
-        # Стиль для виджетов
-        self.style = ttk.Style(self)
-        self.style.configure(
-            "TButton",
-            background="#eeeeee",  # Светло-серые кнопки
-            foreground="#313131",  # Темно-серый текст в кнопках
-            relief="flat",  # Без границ
-            padding=12,
-            font=custom_font,
-        )
+        button_params = {
+            "corner_radius": 12,
+            "border_color": "white",
+            "border_width": 2,
+            "fg_color": "#eeeeee",
+            "hover_color": "#ffffff",
+            "text_color": "#313131",
+            "font": custom_font,
+        }
 
-        self.style.configure("TEntry",
-                             foreground="#303030",  # Темно-серый текст в поле ввода
-                             background="#ffffff",  # Белое поле ввода
-                             font=default_font,  # Шрифт по умолчанию для поля ввода
-                             fieldbackground="#ffffff")
-
-        self.style.map("TButton", background=[("active", "#2AD1A3")])  # Цвет кнопки при наведении (неон бирюзово-зеленый)
-
-        # Скругление кнопок и поля ввода
-        self.style.configure(
-            "TButton",
-            borderwidth=5,
-            relief="solid",
-            width=20,
-            padding=(10, 5),  # Сильно скругленные углы кнопок
-            font=custom_font,
-        )
-
-        self.style.configure("TEntry",
-                             relief="solid",
-                             borderwidth=3,
-                             width=30,
-                             padding=(10, 5))  # Поле ввода с четким контуром и скругленными углами
+        entry_params = {
+            "corner_radius": 12,
+            "border_color": "white",
+            "border_width": 2,
+            "fg_color": "#ffffff",
+            "text_color": "#303030",
+            "font": default_font,
+        }
 
         # Создаем рамку для текста
-        self.frame = tk.Frame(self, bg="#2f2f2f")
+        self.frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
         self.frame.pack(padx=20, pady=20, expand=True, fill="both")
 
         # Создаем метку
         header_font = tkfont.Font(family=custom_font.actual("family"), size=16, weight="bold")
-        self.label = tk.Label(self.frame, text="Генератор Глав", fg="#eeeeee", bg="#2f2f2f", font=header_font)
+        self.label = ctk.CTkLabel(self.frame, text="Генератор Глав", text_color="#eeeeee", font=header_font)
         self.label.pack(pady=20)
 
         # Кнопки для взаимодействия
-        self.ask_button = ttk.Button(self.frame, text="Начать генерацию", command=self.ask_questions, style="TButton")
+        self.ask_button = ctk.CTkButton(self.frame, text="Начать генерацию", command=self.ask_questions, **button_params)
         self.ask_button.pack(pady=10)
 
         # Поле для ввода пути с кнопкой
-        self.path_label = tk.Label(self.frame, text="Выберите путь для сохранения:", fg="#eeeeee", bg="#2f2f2f")
+        self.path_label = ctk.CTkLabel(self.frame, text="Выберите путь для сохранения:", text_color="#eeeeee")
         self.path_label.pack(pady=10)
 
-        self.path_entry = ttk.Entry(self.frame)
+        self.path_entry = ctk.CTkEntry(self.frame, **entry_params)
         self.path_entry.pack(fill=tk.X, padx=10, pady=5)
 
         # Кнопка для выбора папки
-        self.browse_button = ttk.Button(self.frame, text="Выбрать папку", command=self.browse_folder, style="TButton")
+        self.browse_button = ctk.CTkButton(self.frame, text="Выбрать папку", command=self.browse_folder, **button_params)
         self.browse_button.pack(pady=5)
 
     def browse_folder(self):
@@ -136,15 +123,25 @@ class Application(tk.Tk):
         self.show_popup(message, "red")
 
     def show_popup(self, message, color="green"):
-        popup = tk.Toplevel(self)
+        popup = ctk.CTkToplevel(self)
         popup.geometry("300x100")
         popup.title("Результат")
-        popup.configure(bg="#2f2f2f")
+        popup.configure(fg_color="#2f2f2f")
 
-        label = tk.Label(popup, text=message, fg=color, bg="#2f2f2f")
+        label = ctk.CTkLabel(popup, text=message, text_color=color)
         label.pack(pady=20)
 
-        close_button = ttk.Button(popup, text="Закрыть", command=popup.destroy, style="TButton")
+        close_button = ctk.CTkButton(
+            popup,
+            text="Закрыть",
+            command=popup.destroy,
+            corner_radius=12,
+            border_color="white",
+            border_width=2,
+            fg_color="#eeeeee",
+            hover_color="#ffffff",
+            text_color="#313131",
+        )
         close_button.pack()
 
 if __name__ == "__main__":
