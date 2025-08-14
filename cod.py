@@ -1,10 +1,9 @@
 import tkinter as tk
 from tkinter import simpledialog, filedialog
-from tkinter import ttk
+from tkinter import ttk, font as tkfont
 import os
 import time
 from docx import Document
-from PIL import ImageFont, ImageDraw, Image
 
 class Application(tk.Tk):
     def __init__(self):
@@ -24,7 +23,9 @@ class Application(tk.Tk):
         )
 
         # Настройка шрифта
-        custom_font = ImageFont.truetype(font_path, 12)
+        default_size = tkfont.nametofont("TkDefaultFont").cget("size")
+        custom_font = tkfont.Font(file=font_path, family="Cattedrale", size=default_size)
+        self.option_add("*Font", custom_font)
 
         # Стиль для виджетов
         self.style = ttk.Style(self)
@@ -32,13 +33,12 @@ class Application(tk.Tk):
                              background="#eeeeee",  # Светло-серые кнопки
                              foreground="#313131",  # Темно-серый текст в кнопках
                              relief="flat",  # Без границ
-                             font=("Arial", 12),  # Шрифт по умолчанию для кнопок
                              padding=12)
 
         self.style.configure("TEntry",
                              foreground="#303030",  # Темно-серый текст в поле ввода
                              background="#ffffff",  # Белое поле ввода
-                             font=("Arial", 12),  # Шрифт по умолчанию для поля ввода
+                             font=("Arial", default_size),  # Шрифт по умолчанию для поля ввода
                              fieldbackground="#ffffff")
 
         self.style.map("TButton", background=[("active", "#2AD1A3")])  # Цвет кнопки при наведении (неон бирюзово-зеленый)
