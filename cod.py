@@ -34,11 +34,14 @@ class Application(tk.Tk):
 
         # Стиль для виджетов
         self.style = ttk.Style(self)
-        self.style.configure("TButton",
-                             background="#eeeeee",  # Светло-серые кнопки
-                             foreground="#313131",  # Темно-серый текст в кнопках
-                             relief="flat",  # Без границ
-                             padding=12)
+        self.style.configure(
+            "TButton",
+            background="#eeeeee",  # Светло-серые кнопки
+            foreground="#313131",  # Темно-серый текст в кнопках
+            relief="flat",  # Без границ
+            padding=12,
+            font=custom_font,
+        )
 
         self.style.configure("TEntry",
                              foreground="#303030",  # Темно-серый текст в поле ввода
@@ -49,11 +52,14 @@ class Application(tk.Tk):
         self.style.map("TButton", background=[("active", "#2AD1A3")])  # Цвет кнопки при наведении (неон бирюзово-зеленый)
 
         # Скругление кнопок и поля ввода
-        self.style.configure("TButton",
-                             borderwidth=5,
-                             relief="solid",
-                             width=20,
-                             padding=(10, 5))  # Сильно скругленные углы кнопок
+        self.style.configure(
+            "TButton",
+            borderwidth=5,
+            relief="solid",
+            width=20,
+            padding=(10, 5),  # Сильно скругленные углы кнопок
+            font=custom_font,
+        )
 
         self.style.configure("TEntry",
                              relief="solid",
