@@ -7,6 +7,9 @@ import os
 import time
 from docx import Document
 
+# Path to store window size
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window_size.txt")
+
 class Application(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -15,9 +18,19 @@ class Application(ctk.CTk):
 
         # Создаем окно перед настройкой шрифта
         self.title("Генератор Глав")
-        self.geometry("500x400")  # Размер окна
+        # Set window geometry
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH) as f:
+                size = f.read().strip()
+            if size:
+                self.geometry(size)
+            else:
+                self.geometry("500x400")  # Размер окна
+        else:
+            self.geometry("500x400")  # Размер окна
         self.configure(fg_color="#2f2f2f")  # Темно-серый фон
-        self.resizable(False, False)  # Запрещаем изменение размера окна
+        self.resizable(True, True)
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Путь к вашему шрифту
         font_path = os.path.join(
@@ -121,6 +134,11 @@ class Application(ctk.CTk):
 
     def show_error(self, message):
         self.show_popup(message, "red")
+
+    def on_closing(self):
+        with open(CONFIG_PATH, "w") as f:
+            f.write(self.geometry())
+        self.destroy()
 
     def show_popup(self, message, color="green"):
         popup = ctk.CTkToplevel(self)
