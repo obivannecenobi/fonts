@@ -97,36 +97,18 @@ class Application(tk.Tk):
         self.label = ttk.Label(self.frame, text="Генератор Глав", font=header_font, style="Custom.TLabel")
         self.label.pack(pady=20)
 
-        # Кнопки для взаимодействия с подсветкой
-        ask_frame = ctk.CTkFrame(
-            self.frame,
-            fg_color="#FFFFFF",
-            width=200,
-            height=50,
-            corner_radius=12,
-        )
-        ask_frame.pack(pady=10)
-        ask_frame.pack_propagate(False)
-        ask_glow = ctk.CTkLabel(
-            ask_frame,
-            text="",
-            fg_color="#E0E0E0",
-            corner_radius=12,
-        )
-        ask_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
+        # Кнопка для начала генерации
         self.ask_button = ctk.CTkButton(
-            ask_frame,
+            self.frame,
             text="Начать генерацию",
             command=self.ask_questions,
             corner_radius=12,
-            fg_color="transparent",
-            text_color="#313131",
-            hover_color="#FFFFFF",
-            border_color="white",
-            border_width=2,
+            border_width=0,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
             font=self.custom_font,
         )
-        self.ask_button.place(relx=0.5, rely=0.5, anchor="center")
+        self.ask_button.pack(pady=10)
 
         # Поле для ввода пути с кнопкой
         self.path_label = ttk.Label(
@@ -146,36 +128,18 @@ class Application(tk.Tk):
         )
         self.path_entry.pack(fill=tk.X, padx=10, pady=5)
 
-        # Кнопка для выбора папки с подсветкой
-        browse_frame = ctk.CTkFrame(
-            self.frame,
-            fg_color="#FFFFFF",
-            width=200,
-            height=50,
-            corner_radius=12,
-        )
-        browse_frame.pack(pady=5)
-        browse_frame.pack_propagate(False)
-        browse_glow = ctk.CTkLabel(
-            browse_frame,
-            text="",
-            fg_color="#E0E0E0",
-            corner_radius=12,
-        )
-        browse_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
+        # Кнопка для выбора папки
         self.browse_button = ctk.CTkButton(
-            browse_frame,
+            self.frame,
             text="Выбрать папку",
             command=self.browse_folder,
             corner_radius=12,
-            fg_color="transparent",
-            text_color="#313131",
-            hover_color="#FFFFFF",
-            border_color="white",
-            border_width=2,
+            border_width=0,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
             font=self.custom_font,
         )
-        self.browse_button.place(relx=0.5, rely=0.5, anchor="center")
+        self.browse_button.pack(pady=10)
 
     def browse_folder(self):
         folder_selected = filedialog.askdirectory(title="Выберите папку для сохранения")
