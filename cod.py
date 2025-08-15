@@ -7,6 +7,7 @@ directory so the font file must be available on disk.
 import base64
 import ctypes
 import os
+import sys
 import time
 import tkinter as tk
 from tkinter import filedialog, simpledialog, ttk
@@ -47,10 +48,20 @@ class Application(tk.Tk):
         )
 
         # Регистрация и настройка шрифта
-        ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
+        if sys.platform.startswith("win"):
+            ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
+            font_family = "Cattedrale [RUS by penka220]"
+        else:
+            # На системах Unix пытаемся зарегистрировать шрифт через tkfont.
+            # Если это невозможно, используем системный шрифт по умолчанию.
+            try:
+                self._loaded_font = tkfont.Font(file=font_path)
+                font_family = self._loaded_font.actual("family")
+            except tk.TclError:
+                font_family = tkfont.nametofont("TkDefaultFont").actual("family")
         default_font = tkfont.nametofont("TkDefaultFont")
-        custom_font = tkfont.Font(
-            family="Cattedrale [RUS by penka220]",
+        custom_font = ctk.CTkFont(
+            family=font_family,
             size=default_font.cget("size") + 2,
         )
         self.custom_font = custom_font
@@ -82,14 +93,14 @@ class Application(tk.Tk):
         self.frame.pack(padx=20, pady=20, expand=True, fill="both")
 
         # Создаем метку
-        header_font = tkfont.Font(family=custom_font.actual("family"), size=16, weight="bold")
+        header_font = ctk.CTkFont(family=custom_font.actual("family"), size=16, weight="bold")
         self.label = ttk.Label(self.frame, text="Генератор Глав", font=header_font, style="Custom.TLabel")
         self.label.pack(pady=20)
 
         # Кнопки для взаимодействия с подсветкой
         ask_frame = ctk.CTkFrame(
             self.frame,
-            fg_color="#FFFFFF20",
+            fg_color="#FFFFFF",
             width=200,
             height=50,
             corner_radius=12,
@@ -99,7 +110,7 @@ class Application(tk.Tk):
         ask_glow = ctk.CTkLabel(
             ask_frame,
             text="",
-            fg_color="#FFFFFF40",
+            fg_color="#E0E0E0",
             corner_radius=12,
         )
         ask_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
@@ -108,7 +119,7 @@ class Application(tk.Tk):
             text="Начать генерацию",
             command=self.ask_questions,
             corner_radius=12,
-            fg_color="#00000000",
+            fg_color="transparent",
             text_color="#313131",
             hover_color="#FFFFFF",
             border_color="white",
@@ -137,7 +148,7 @@ class Application(tk.Tk):
         # Кнопка для выбора папки с подсветкой
         browse_frame = ctk.CTkFrame(
             self.frame,
-            fg_color="#FFFFFF20",
+            fg_color="#FFFFFF",
             width=200,
             height=50,
             corner_radius=12,
@@ -147,7 +158,7 @@ class Application(tk.Tk):
         browse_glow = ctk.CTkLabel(
             browse_frame,
             text="",
-            fg_color="#FFFFFF40",
+            fg_color="#E0E0E0",
             corner_radius=12,
         )
         browse_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
@@ -156,7 +167,7 @@ class Application(tk.Tk):
             text="Выбрать папку",
             command=self.browse_folder,
             corner_radius=12,
-            fg_color="#00000000",
+            fg_color="transparent",
             text_color="#313131",
             hover_color="#FFFFFF",
             border_color="white",
@@ -228,7 +239,7 @@ class Application(tk.Tk):
 
         close_frame = ctk.CTkFrame(
             popup,
-            fg_color="#FFFFFF20",
+            fg_color="#FFFFFF",
             width=200,
             height=50,
             corner_radius=12,
@@ -238,7 +249,7 @@ class Application(tk.Tk):
         close_glow = ctk.CTkLabel(
             close_frame,
             text="",
-            fg_color="#FFFFFF40",
+            fg_color="#E0E0E0",
             corner_radius=12,
         )
         close_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
@@ -247,7 +258,7 @@ class Application(tk.Tk):
             text="Закрыть",
             command=popup.destroy,
             corner_radius=12,
-            fg_color="#00000000",
+            fg_color="transparent",
             text_color="#313131",
             hover_color="#FFFFFF",
             border_color="white",
