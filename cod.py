@@ -13,21 +13,39 @@ class Application(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        style = ttk.Style(self)
-        style.theme_use("clam")
+        # Путь к вашему шрифту
+        font_path = os.path.join(
+            os.path.dirname(__file__),
+            "fonts",
+            "Cattedrale[RUSbypenka220]-Regular.ttf",
+        )
 
-        style.configure("Custom.TFrame", background="#2f2f2f")
-        style.configure("Custom.TLabel", background="#2f2f2f", foreground="#eeeeee")
-        style.configure(
-            "Custom.TButton",
+        # Регистрация и настройка шрифта
+        ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
+        default_font = tkfont.nametofont("TkDefaultFont")
+        custom_font = tkfont.Font(
+            family="Cattedrale",
+            size=default_font.cget("size") + 2,
+        )
+        self.custom_font = custom_font
+        self.option_add("*Font", custom_font)
+
+        self.style = ttk.Style(self)
+        self.style.theme_use("clam")
+
+        self.style.configure("Custom.TFrame", background="#2f2f2f")
+        self.style.configure("Custom.TLabel", background="#2f2f2f", foreground="#eeeeee")
+        self.style.configure(
+            "TButton",
             background="#eeeeee",
             foreground="#313131",
             borderwidth=2,
             padding=6,
             relief="flat",
+            font=self.custom_font,
         )
-        style.map("Custom.TButton", background=[("active", "#ffffff")])
-        style.configure(
+        self.style.map("TButton", background=[("active", "#ffffff")])
+        self.style.configure(
             "Custom.TEntry",
             foreground="#303030",
             fieldbackground="#ffffff",
@@ -50,22 +68,6 @@ class Application(tk.Tk):
         self.resizable(True, True)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        # Путь к вашему шрифту
-        font_path = os.path.join(
-            os.path.dirname(__file__),
-            "fonts",
-            "Cattedrale[RUSbypenka220]-Regular.ttf",
-        )
-
-        # Регистрация и настройка шрифта
-        ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
-        default_font = tkfont.nametofont("TkDefaultFont")
-        custom_font = tkfont.Font(
-            family="Cattedrale",
-            size=default_font.cget("size") + 2,
-        )
-        self.option_add("*Font", custom_font)
-
         # Создаем рамку для текста
         self.frame = ttk.Frame(self, style="Custom.TFrame")
         self.frame.pack(padx=20, pady=20, expand=True, fill="both")
@@ -80,7 +82,7 @@ class Application(tk.Tk):
             self.frame,
             text="Начать генерацию",
             command=self.ask_questions,
-            style="Custom.TButton",
+            style="TButton",
         )
         self.ask_button.pack(pady=10)
 
@@ -98,7 +100,7 @@ class Application(tk.Tk):
             self.frame,
             text="Выбрать папку",
             command=self.browse_folder,
-            style="Custom.TButton",
+            style="TButton",
         )
         self.browse_button.pack(pady=5)
 
@@ -158,6 +160,7 @@ class Application(tk.Tk):
         popup.configure(bg="#2f2f2f")
 
         style = ttk.Style(popup)
+        style.configure("TButton", font=self.custom_font)
         style.configure("Popup.TLabel", background="#2f2f2f", foreground=color)
 
         label = ttk.Label(popup, text=message, style="Popup.TLabel")
@@ -167,7 +170,7 @@ class Application(tk.Tk):
             popup,
             text="Закрыть",
             command=popup.destroy,
-            style="Custom.TButton",
+            style="TButton",
         )
         close_button.pack()
 
