@@ -106,6 +106,7 @@ class Application(tk.Tk):
             border_width=0,
             fg_color="#313131",
             hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
             font=self.custom_font,
         )
         self.ask_button.pack(pady=10)
@@ -137,6 +138,7 @@ class Application(tk.Tk):
             border_width=0,
             fg_color="#313131",
             hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
             font=self.custom_font,
         )
         self.browse_button.pack(pady=10)
