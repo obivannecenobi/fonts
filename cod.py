@@ -5,6 +5,7 @@ import ctypes
 import os
 import time
 from docx import Document
+import customtkinter as ctk
 
 # Path to store window size
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window_size.txt")
@@ -35,22 +36,6 @@ class Application(tk.Tk):
 
         self.style.configure("Custom.TFrame", background="#2f2f2f")
         self.style.configure("Custom.TLabel", background="#2f2f2f", foreground="#eeeeee")
-        self.style.configure(
-            "TButton",
-            background="#eeeeee",
-            foreground="#313131",
-            borderwidth=2,
-            padding=6,
-            relief="flat",
-            font=self.custom_font,
-        )
-        self.style.map("TButton", background=[("active", "#ffffff")])
-        self.style.configure(
-            "Custom.TEntry",
-            foreground="#303030",
-            fieldbackground="#ffffff",
-            borderwidth=2,
-        )
 
         # Создаем окно перед настройкой шрифта
         self.title("Генератор Глав")
@@ -78,11 +63,15 @@ class Application(tk.Tk):
         self.label.pack(pady=20)
 
         # Кнопки для взаимодействия
-        self.ask_button = ttk.Button(
+        self.ask_button = ctk.CTkButton(
             self.frame,
             text="Начать генерацию",
             command=self.ask_questions,
-            style="TButton",
+            corner_radius=12,
+            fg_color="#eeeeee",
+            text_color="#313131",
+            hover_color="#ffffff",
+            font=self.custom_font,
         )
         self.ask_button.pack(pady=10)
 
@@ -92,15 +81,27 @@ class Application(tk.Tk):
         )
         self.path_label.pack(pady=10)
 
-        self.path_entry = ttk.Entry(self.frame, style="Custom.TEntry")
+        self.path_entry = ctk.CTkEntry(
+            self.frame,
+            corner_radius=12,
+            fg_color="#ffffff",
+            text_color="#303030",
+            border_color="#2f2f2f",
+            border_width=2,
+            font=self.custom_font,
+        )
         self.path_entry.pack(fill=tk.X, padx=10, pady=5)
 
         # Кнопка для выбора папки
-        self.browse_button = ttk.Button(
+        self.browse_button = ctk.CTkButton(
             self.frame,
             text="Выбрать папку",
             command=self.browse_folder,
-            style="TButton",
+            corner_radius=12,
+            fg_color="#eeeeee",
+            text_color="#313131",
+            hover_color="#ffffff",
+            font=self.custom_font,
         )
         self.browse_button.pack(pady=5)
 
@@ -160,17 +161,20 @@ class Application(tk.Tk):
         popup.configure(bg="#2f2f2f")
 
         style = ttk.Style(popup)
-        style.configure("TButton", font=self.custom_font)
         style.configure("Popup.TLabel", background="#2f2f2f", foreground=color)
 
         label = ttk.Label(popup, text=message, style="Popup.TLabel")
         label.pack(pady=20)
 
-        close_button = ttk.Button(
+        close_button = ctk.CTkButton(
             popup,
             text="Закрыть",
             command=popup.destroy,
-            style="TButton",
+            corner_radius=12,
+            fg_color="#eeeeee",
+            text_color="#313131",
+            hover_color="#ffffff",
+            font=self.custom_font,
         )
         close_button.pack()
 
