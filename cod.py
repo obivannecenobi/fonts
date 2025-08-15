@@ -62,18 +62,36 @@ class Application(tk.Tk):
         self.label = ttk.Label(self.frame, text="Генератор Глав", font=header_font, style="Custom.TLabel")
         self.label.pack(pady=20)
 
-        # Кнопки для взаимодействия
-        self.ask_button = ctk.CTkButton(
+        # Кнопки для взаимодействия с подсветкой
+        ask_frame = ctk.CTkFrame(
             self.frame,
+            fg_color="#FFFFFF20",
+            width=200,
+            height=50,
+            corner_radius=12,
+        )
+        ask_frame.pack(pady=10)
+        ask_frame.pack_propagate(False)
+        ask_glow = ctk.CTkLabel(
+            ask_frame,
+            text="",
+            fg_color="#FFFFFF40",
+            corner_radius=12,
+        )
+        ask_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
+        self.ask_button = ctk.CTkButton(
+            ask_frame,
             text="Начать генерацию",
             command=self.ask_questions,
             corner_radius=12,
-            fg_color="#eeeeee",
+            fg_color="#00000000",
             text_color="#313131",
-            hover_color="#ffffff",
+            hover_color="#FFFFFF",
+            border_color="white",
+            border_width=2,
             font=self.custom_font,
         )
-        self.ask_button.pack(pady=10)
+        self.ask_button.place(relx=0.5, rely=0.5, anchor="center")
 
         # Поле для ввода пути с кнопкой
         self.path_label = ttk.Label(
@@ -92,18 +110,36 @@ class Application(tk.Tk):
         )
         self.path_entry.pack(fill=tk.X, padx=10, pady=5)
 
-        # Кнопка для выбора папки
-        self.browse_button = ctk.CTkButton(
+        # Кнопка для выбора папки с подсветкой
+        browse_frame = ctk.CTkFrame(
             self.frame,
+            fg_color="#FFFFFF20",
+            width=200,
+            height=50,
+            corner_radius=12,
+        )
+        browse_frame.pack(pady=5)
+        browse_frame.pack_propagate(False)
+        browse_glow = ctk.CTkLabel(
+            browse_frame,
+            text="",
+            fg_color="#FFFFFF40",
+            corner_radius=12,
+        )
+        browse_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
+        self.browse_button = ctk.CTkButton(
+            browse_frame,
             text="Выбрать папку",
             command=self.browse_folder,
             corner_radius=12,
-            fg_color="#eeeeee",
+            fg_color="#00000000",
             text_color="#313131",
-            hover_color="#ffffff",
+            hover_color="#FFFFFF",
+            border_color="white",
+            border_width=2,
             font=self.custom_font,
         )
-        self.browse_button.pack(pady=5)
+        self.browse_button.place(relx=0.5, rely=0.5, anchor="center")
 
     def browse_folder(self):
         folder_selected = filedialog.askdirectory(title="Выберите папку для сохранения")
@@ -166,17 +202,35 @@ class Application(tk.Tk):
         label = ttk.Label(popup, text=message, style="Popup.TLabel")
         label.pack(pady=20)
 
-        close_button = ctk.CTkButton(
+        close_frame = ctk.CTkFrame(
             popup,
+            fg_color="#FFFFFF20",
+            width=200,
+            height=50,
+            corner_radius=12,
+        )
+        close_frame.pack(pady=5)
+        close_frame.pack_propagate(False)
+        close_glow = ctk.CTkLabel(
+            close_frame,
+            text="",
+            fg_color="#FFFFFF40",
+            corner_radius=12,
+        )
+        close_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
+        close_button = ctk.CTkButton(
+            close_frame,
             text="Закрыть",
             command=popup.destroy,
             corner_radius=12,
-            fg_color="#eeeeee",
+            fg_color="#00000000",
             text_color="#313131",
-            hover_color="#ffffff",
+            hover_color="#FFFFFF",
+            border_color="white",
+            border_width=2,
             font=self.custom_font,
         )
-        close_button.pack()
+        close_button.place(relx=0.5, rely=0.5, anchor="center")
 
 if __name__ == "__main__":
     app = Application()
