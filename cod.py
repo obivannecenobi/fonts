@@ -74,7 +74,7 @@ class Application(tk.Tk):
         self.style.configure("Custom.TLabel", background="#2f2f2f", foreground="#eeeeee")
 
         # Создаем окно перед настройкой шрифта
-        self.title("Генератор Глав")
+        self.title("")
         # Set window geometry
         saved_geom = ""
         if os.path.exists(CONFIG_PATH):
