@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import simpledialog, filedialog, ttk
 from tkinter import font as tkfont
+import base64
 import ctypes
 import os
 import time
@@ -10,9 +11,26 @@ import customtkinter as ctk
 # Path to store window size
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window_size.txt")
 
+ICON_PNG_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAr0lEQVR4nO3QLW5CQRAA4C9F9AYVCBxp0jOAqCAQwgEqMfQInILgcEU0XABFguIW3ACFwlY0NSNe1rS8"
+    "lCfIfGp2fnYnS0oppTuxxkOdwVpDhUd84bvJBXqV+BWHiPu3XqCLTwwquSH2EY+wib5/t8AST0V+XZzbWEXvr675gQ5OuFRyLzgWfefIta+4+8/G2GEa5zmeK/U3bKPv"
+    "Zlp4j/ijqM2i3phJk4+llFK6Tz/HBhQcv0+QOQAAAABJRU5ErkJggg=="
+)
+
+
+def ensure_icon(path: str) -> None:
+    """Create the icon file from embedded data if it is missing."""
+    if not os.path.exists(path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(base64.b64decode(ICON_PNG_B64))
+
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
+        icon_path = os.path.join(os.path.dirname(__file__), "icons", "code.png")
+        ensure_icon(icon_path)
+        self.iconphoto(True, tk.PhotoImage(file=icon_path))
 
         # Путь к вашему шрифту
         font_path = os.path.join(
