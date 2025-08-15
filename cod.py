@@ -24,7 +24,7 @@ class Application(tk.Tk):
         ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
         default_font = tkfont.nametofont("TkDefaultFont")
         custom_font = tkfont.Font(
-            family="Cattedrale",
+            family="Cattedrale [RUS by penka220]",
             size=default_font.cget("size") + 2,
         )
         self.custom_font = custom_font
