@@ -8,8 +8,8 @@ import time
 from docx import Document
 import customtkinter as ctk
 
-# Path to store window size
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window_size.txt")
+# Path to store window geometry
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
 
 ICON_PNG_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAr0lEQVR4nO3QLW5CQRAA4C9F9AYVCBxp0jOAqCAQwgEqMfQInILgcEU0XABFguIW3ACFwlY0NSNe1rS8"
@@ -58,13 +58,12 @@ class Application(tk.Tk):
         # Создаем окно перед настройкой шрифта
         self.title("Генератор Глав")
         # Set window geometry
+        saved_geom = ""
         if os.path.exists(CONFIG_PATH):
             with open(CONFIG_PATH) as f:
-                size = f.read().strip()
-            if size:
-                self.geometry(size)
-            else:
-                self.geometry("500x400")  # Размер окна
+                saved_geom = f.read().strip()
+        if saved_geom:
+            self.geometry(saved_geom)
         else:
             self.geometry("500x400")  # Размер окна
         self.configure(bg="#2f2f2f")  # Темно-серый фон
