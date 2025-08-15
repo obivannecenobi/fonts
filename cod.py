@@ -140,7 +140,8 @@ class Application(tk.Tk):
             fg_color="#ffffff",
             text_color="#303030",
             border_color="#2f2f2f",
-            border_width=2,
+            border_width=0,
+            bg_color="#2f2f2f",
             font=self.custom_font,
         )
         self.path_entry.pack(fill=tk.X, padx=10, pady=5)
