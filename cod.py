@@ -1,12 +1,19 @@
-import tkinter as tk
-from tkinter import simpledialog, filedialog, ttk
-from tkinter import font as tkfont
+"""GUI generator for creating DOCX chapter files.
+
+The application registers the bundled 'Cattedrale' font from the local fonts
+directory so the font file must be available on disk.
+"""
+
 import base64
 import ctypes
 import os
 import time
-from docx import Document
+import tkinter as tk
+from tkinter import filedialog, simpledialog, ttk
+from tkinter import font as tkfont
+
 import customtkinter as ctk
+from docx import Document
 
 # Path to store window geometry
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
