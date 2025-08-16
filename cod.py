@@ -40,6 +40,8 @@ class Application(tk.Tk):
         ensure_icon(icon_path)
         self.iconphoto(True, tk.PhotoImage(file=icon_path))
 
+        self.config_data = self.load_config()
+
         # Путь к вашему шрифту
         font_path = os.path.join(
             os.path.dirname(__file__),
@@ -60,9 +62,9 @@ class Application(tk.Tk):
             except tk.TclError:
                 font_family = tkfont.nametofont("TkDefaultFont").actual("family")
         default_font = tkfont.nametofont("TkDefaultFont")
-        custom_font = ctk.CTkFont(
-            family=font_family, size=default_font.cget("size") + 4
-        )
+        base_size = default_font.cget("size") + 4
+        font_size = int(self.config_data.get("font_size", base_size))
+        custom_font = ctk.CTkFont(family=font_family, size=font_size)
         self.custom_font = custom_font
         self.option_add("*Font", custom_font)
 
@@ -75,10 +77,7 @@ class Application(tk.Tk):
         # Создаем окно перед настройкой шрифта
         self.title("")
         # Set window geometry
-        saved_geom = ""
-        if os.path.exists(CONFIG_PATH):
-            with open(CONFIG_PATH) as f:
-                saved_geom = f.read().strip()
+        saved_geom = self.config_data.get("geometry", "")
         if saved_geom:
             self.geometry(saved_geom)
         else:
@@ -141,6 +140,20 @@ class Application(tk.Tk):
             font=self.custom_font,
         )
         self.browse_button.pack(pady=10)
+
+        # Button to adjust font size
+        self.font_button = ctk.CTkButton(
+            self,
+            text="A",
+            width=24,
+            height=24,
+            command=self.show_font_settings,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            font=self.custom_font,
+        )
+        self.font_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
 
     def browse_folder(self):
         folder_selected = filedialog.askdirectory(title="Выберите папку для сохранения")
@@ -227,8 +240,9 @@ class Application(tk.Tk):
         self.show_popup(message, "red")
 
     def on_closing(self):
-        with open(CONFIG_PATH, "w") as f:
-            f.write(self.geometry())
+        self.config_data["geometry"] = self.geometry()
+        self.config_data.setdefault("font_size", str(self.custom_font.cget("size")))
+        self.save_config()
         self.destroy()
 
     def show_popup(self, message, color="green"):
@@ -252,6 +266,51 @@ class Application(tk.Tk):
             font=self.custom_font,
         )
         close_button.pack(pady=5)
+
+    def show_font_settings(self):
+        top = ctk.CTkToplevel(self, fg_color="#2f2f2f", corner_radius=12)
+        top.title("Font size")
+        slider = ctk.CTkSlider(top, from_=8, to=32)
+        slider.set(self.custom_font.cget("size"))
+        slider.pack(padx=20, pady=20)
+
+        def apply():
+            size = int(slider.get())
+            self.custom_font.configure(size=size)
+            self.option_add("*Font", self.custom_font)
+            self.config_data["font_size"] = str(size)
+            self.save_config()
+            top.destroy()
+
+        apply_button = ctk.CTkButton(
+            top,
+            text="Apply",
+            command=apply,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+        )
+        apply_button.pack(pady=10)
+
+    def load_config(self):
+        config = {}
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if "=" in line:
+                        key, value = line.split("=", 1)
+                        config[key] = value
+                    else:
+                        config["geometry"] = line
+        return config
+
+    def save_config(self):
+        with open(CONFIG_PATH, "w") as f:
+            for key, value in self.config_data.items():
+                f.write(f"{key}={value}\n")
 
 if __name__ == "__main__":
     app = Application()
