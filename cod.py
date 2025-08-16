@@ -15,6 +15,7 @@ from tkinter import font as tkfont
 
 import customtkinter as ctk
 from docx import Document
+from glow_button import GlowButton
 
 # Path to store window geometry
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
@@ -98,12 +99,10 @@ class Application(tk.Tk):
         self.label.pack(pady=20)
 
         # Кнопка для начала генерации
-        self.ask_button = ctk.CTkButton(
+        self.ask_button = GlowButton(
             self.frame,
             text="Начать генерацию",
             command=self.ask_questions,
-            corner_radius=12,
-            border_width=0,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -130,12 +129,10 @@ class Application(tk.Tk):
         self.path_entry.pack(fill=tk.X, padx=10, pady=5)
 
         # Кнопка для выбора папки
-        self.browse_button = ctk.CTkButton(
+        self.browse_button = GlowButton(
             self.frame,
             text="Выбрать папку",
             command=self.browse_folder,
-            corner_radius=12,
-            border_width=0,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
