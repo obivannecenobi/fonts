@@ -149,19 +149,22 @@ class Application(tk.Tk):
             self.path_entry.insert(0, folder_selected)
 
     def ask_questions(self):
+        def style_dialog(d):
+            d._ok_button.configure(corner_radius=12)
+            d._cancel_button.configure(corner_radius=12)
+
         total_dialog = ctk.CTkInputDialog(
             title="Сколько ебануть?",
             text="Введите количество глав:",
             fg_color="#2f2f2f",
+            text_color="#eeeeee",
             button_fg_color="#313131",
             button_hover_color="#3e3e3e",
+            entry_fg_color="#ffffff",
+            entry_text_color="#303030",
+            font=self.custom_font,
         )
-        total_dialog._label.configure(font=self.custom_font, text_color="#eeeeee")
-        total_dialog._entry.configure(font=self.custom_font)
-        total_dialog._ok_button.configure(corner_radius=12)
-        total_dialog._cancel_button.configure(corner_radius=12)
-        total_dialog._ok_button.configure(font=self.custom_font)
-        total_dialog._cancel_button.configure(font=self.custom_font)
+        total_dialog.after(0, lambda: style_dialog(total_dialog))
 
         total_chapters = total_dialog.get_input()
         if total_chapters is None:
@@ -172,15 +175,14 @@ class Application(tk.Tk):
             title="На сколько делим епт?",
             text="Введите количество частей в главе:",
             fg_color="#2f2f2f",
+            text_color="#eeeeee",
             button_fg_color="#313131",
             button_hover_color="#3e3e3e",
+            entry_fg_color="#ffffff",
+            entry_text_color="#303030",
+            font=self.custom_font,
         )
-        parts_dialog._label.configure(font=self.custom_font, text_color="#eeeeee")
-        parts_dialog._entry.configure(font=self.custom_font)
-        parts_dialog._ok_button.configure(corner_radius=12)
-        parts_dialog._cancel_button.configure(corner_radius=12)
-        parts_dialog._ok_button.configure(font=self.custom_font)
-        parts_dialog._cancel_button.configure(font=self.custom_font)
+        parts_dialog.after(0, lambda: style_dialog(parts_dialog))
 
         parts_per_chapter = parts_dialog.get_input()
         if parts_per_chapter is None:
