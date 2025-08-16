@@ -121,8 +121,8 @@ class Application(tk.Tk):
         self.path_entry = ctk.CTkEntry(
             self.frame,
             corner_radius=12,
-            fg_color="#313131",
-            text_color="#eeeeee",
+            fg_color="#ffffff",
+            text_color="#303030",
             border_color="#2f2f2f",
             border_width=0,
             bg_color="#2f2f2f",
