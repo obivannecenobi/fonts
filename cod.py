@@ -166,7 +166,7 @@ class Application(tk.Tk):
             self.path_entry.insert(0, folder_selected)
 
     def ask_questions(self):
-        def style_dialog(d):
+        def style_dialog(d, placeholder):
             if hasattr(d, "_ok_button"):
                 for btn in (d._ok_button, d._cancel_button):
                     btn.configure(
@@ -185,15 +185,16 @@ class Application(tk.Tk):
                         corner_radius=12,
                         text_color="#303030",
                         border_width=0,
+                        placeholder_text=placeholder,
                     )
                 if hasattr(d, "_label"):
                     d._label.configure(text_color="#eeeeee", font=self.custom_font)
             else:
-                d.after(20, lambda: style_dialog(d))
+                d.after(20, lambda: style_dialog(d, placeholder))
 
         total_dialog = ctk.CTkInputDialog(
-            title="Сколько ебануть?",
-            text="Введите количество глав:",
+            title="",
+            text="",
             fg_color="#2f2f2f",
             text_color="#eeeeee",
             button_fg_color="#313131",
@@ -203,8 +204,7 @@ class Application(tk.Tk):
             entry_text_color="#303030",
             font=self.custom_font,
         )
-        total_dialog.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
-        total_dialog.after(20, lambda: style_dialog(total_dialog))
+        style_dialog(total_dialog, "Введите количество глав:")
 
         total_chapters = total_dialog.get_input()
         if total_chapters is None:
@@ -212,8 +212,8 @@ class Application(tk.Tk):
         total_chapters = int(total_chapters)
 
         parts_dialog = ctk.CTkInputDialog(
-            title="На сколько делим епт?",
-            text="Введите количество частей в главе:",
+            title="",
+            text="",
             fg_color="#2f2f2f",
             text_color="#eeeeee",
             button_fg_color="#313131",
@@ -223,8 +223,7 @@ class Application(tk.Tk):
             entry_text_color="#303030",
             font=self.custom_font,
         )
-        parts_dialog.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
-        parts_dialog.after(20, lambda: style_dialog(parts_dialog))
+        style_dialog(parts_dialog, "Введите количество частей в главе:")
 
         parts_per_chapter = parts_dialog.get_input()
         if parts_per_chapter is None:
