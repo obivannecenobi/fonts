@@ -40,11 +40,12 @@ class CustomInputDialog(ctk.CTkToplevel):
             text_color="#303030",
             corner_radius=12,
             border_width=0,
+            font=font,
         )
         self._entry.pack(padx=20, pady=(0, 20))
 
         button_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        button_frame.pack(pady=(0, 20))
+        button_frame.pack(padx=20, pady=(0, 20))
 
         self._ok_button = ctk.CTkButton(
             button_frame,
@@ -55,6 +56,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             text_color="#eeeeee",
             corner_radius=12,
             border_width=0,
+            font=font,
         )
         self._ok_button.pack(side="left", padx=(0, 10))
 
@@ -67,11 +69,22 @@ class CustomInputDialog(ctk.CTkToplevel):
             text_color="#eeeeee",
             corner_radius=12,
             border_width=0,
+            font=font,
         )
         self._cancel_button.pack(side="left")
 
         self._entry.bind("<Return>", lambda event: self._ok())
         self.protocol("WM_DELETE_WINDOW", self._cancel)
+
+        self.update_idletasks()
+        master.update_idletasks()
+        x = master.winfo_rootx() + (master.winfo_width() // 2) - (
+            self.winfo_width() // 2
+        )
+        y = master.winfo_rooty() + (master.winfo_height() // 2) - (
+            self.winfo_height() // 2
+        )
+        self.geometry(f"+{x}+{y}")
 
     def _ok(self) -> None:
         self.result = self._entry.get()
@@ -217,7 +230,7 @@ class Application(tk.Tk):
             self.path_entry.insert(0, folder_selected)
 
     def ask_questions(self):
-        total_dialog = CustomInputDialog(self, "Введите количество глав:", self.custom_font)
+        total_dialog = CustomInputDialog(self, "Сколько ебануть?", self.custom_font)
         total_dialog.iconbitmap("")
 
         total_chapters = total_dialog.get_input()
