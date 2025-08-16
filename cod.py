@@ -232,7 +232,6 @@ class Application(tk.Tk):
 
     def ask_questions(self):
         total_dialog = CustomInputDialog(self, "Сколько ебануть?", self.custom_font)
-        total_dialog.iconbitmap("")
 
         total_chapters = total_dialog.get_input()
         if total_chapters is None:
@@ -242,7 +241,6 @@ class Application(tk.Tk):
         parts_dialog = CustomInputDialog(
             self, "Введите количество частей в главе:", self.custom_font
         )
-        parts_dialog.iconbitmap("")
 
         parts_per_chapter = parts_dialog.get_input()
         if parts_per_chapter is None:
@@ -292,6 +290,7 @@ class Application(tk.Tk):
     def show_popup(self, message):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         popup.iconbitmap("")
+        popup.title("")
         popup.geometry("300x100")
 
         frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
@@ -325,7 +324,8 @@ class Application(tk.Tk):
 
     def show_font_settings(self):
         top = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        top.title("Font size")
+        top.iconbitmap("")
+        top.title("")
 
         frame = ctk.CTkFrame(top, corner_radius=12, fg_color="#2f2f2f")
         frame.pack(fill="both", expand=True)
