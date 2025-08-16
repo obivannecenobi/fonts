@@ -33,6 +33,76 @@ def ensure_icon(path: str) -> None:
         with open(path, "wb") as f:
             f.write(base64.b64decode(ICON_PNG_B64))
 
+
+class CustomInputDialog(ctk.CTkToplevel):
+    """Simple dialog asking the user for a single line of text."""
+
+    def __init__(self, master, question: str, font: ctk.CTkFont):
+        super().__init__(master)
+        self.title("")
+        self.resizable(False, False)
+        self.configure(fg_color="#2f2f2f")
+        self.result = None
+
+        self._label = ctk.CTkLabel(
+            self, text=question, text_color="#eeeeee", font=font
+        )
+        self._label.pack(padx=20, pady=(20, 10))
+
+        self._entry = ctk.CTkEntry(
+            self,
+            fg_color="#ffffff",
+            border_color="#2f2f2f",
+            text_color="#303030",
+            corner_radius=12,
+            border_width=0,
+        )
+        self._entry.pack(padx=20, pady=(0, 20))
+
+        button_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
+        button_frame.pack(pady=(0, 20))
+
+        self._ok_button = ctk.CTkButton(
+            button_frame,
+            text="OK",
+            command=self._ok,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            corner_radius=12,
+            border_width=0,
+        )
+        self._ok_button.pack(side="left", padx=(0, 10))
+
+        self._cancel_button = ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            command=self._cancel,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            corner_radius=12,
+            border_width=0,
+        )
+        self._cancel_button.pack(side="left")
+
+        self._entry.bind("<Return>", lambda event: self._ok())
+        self.protocol("WM_DELETE_WINDOW", self._cancel)
+
+    def _ok(self) -> None:
+        self.result = self._entry.get()
+        self.destroy()
+
+    def _cancel(self) -> None:
+        self.result = None
+        self.destroy()
+
+    def get_input(self):
+        self._entry.focus()
+        self.grab_set()
+        self.wait_window()
+        return self.result
+
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -166,45 +236,7 @@ class Application(tk.Tk):
             self.path_entry.insert(0, folder_selected)
 
     def ask_questions(self):
-        def style_dialog(d, placeholder):
-            if hasattr(d, "_ok_button"):
-                for btn in (d._ok_button, d._cancel_button):
-                    btn.configure(
-                        bg_color="#2f2f2f",
-                        fg_color="#313131",
-                        hover_color="#3e3e3e",
-                        corner_radius=12,
-                        text_color="#eeeeee",
-                        border_width=0,
-                    )
-                if hasattr(d, "_entry"):
-                    d._entry.configure(
-                        bg_color="#2f2f2f",
-                        fg_color="#ffffff",
-                        border_color="#2f2f2f",
-                        corner_radius=12,
-                        text_color="#303030",
-                        border_width=0,
-                        placeholder_text=placeholder,
-                    )
-                if hasattr(d, "_label"):
-                    d._label.configure(text_color="#eeeeee", font=self.custom_font)
-            else:
-                d.after(20, lambda: style_dialog(d, placeholder))
-
-        total_dialog = ctk.CTkInputDialog(
-            title="",
-            text="",
-            fg_color="#2f2f2f",
-            text_color="#eeeeee",
-            button_fg_color="#313131",
-            button_hover_color="#3e3e3e",
-            entry_fg_color="#ffffff",
-            entry_border_color="#2f2f2f",
-            entry_text_color="#303030",
-            font=self.custom_font,
-        )
-        style_dialog(total_dialog, "Введите количество глав:")
+        total_dialog = CustomInputDialog(self, "Введите количество глав:", self.custom_font)
         total_dialog.iconbitmap("")
 
         total_chapters = total_dialog.get_input()
@@ -212,19 +244,9 @@ class Application(tk.Tk):
             return
         total_chapters = int(total_chapters)
 
-        parts_dialog = ctk.CTkInputDialog(
-            title="",
-            text="",
-            fg_color="#2f2f2f",
-            text_color="#eeeeee",
-            button_fg_color="#313131",
-            button_hover_color="#3e3e3e",
-            entry_fg_color="#ffffff",
-            entry_border_color="#2f2f2f",
-            entry_text_color="#303030",
-            font=self.custom_font,
+        parts_dialog = CustomInputDialog(
+            self, "Введите количество частей в главе:", self.custom_font
         )
-        style_dialog(parts_dialog, "Введите количество частей в главе:")
         parts_dialog.iconbitmap("")
 
         parts_per_chapter = parts_dialog.get_input()
