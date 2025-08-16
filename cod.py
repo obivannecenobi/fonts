@@ -207,7 +207,7 @@ class Application(tk.Tk):
             entry_text_color="#303030",
             font=self.custom_font,
         )
-        total_dialog._window.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
+        total_dialog.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
         total_dialog.after(20, lambda: style_dialog(total_dialog))
 
         total_chapters = total_dialog.get_input()
@@ -227,7 +227,7 @@ class Application(tk.Tk):
             entry_text_color="#303030",
             font=self.custom_font,
         )
-        parts_dialog._window.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
+        parts_dialog.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
         parts_dialog.after(20, lambda: style_dialog(parts_dialog))
 
         parts_per_chapter = parts_dialog.get_input()
