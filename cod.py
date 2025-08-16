@@ -151,14 +151,16 @@ class Application(tk.Tk):
         total_dialog = ctk.CTkInputDialog(
             title="Сколько ебануть?",
             text="Введите количество глав:",
-            text_font=self.custom_font,
-            button_font=self.custom_font,
             fg_color="#2f2f2f",
-            text_color="#eeeeee",
             button_fg_color="#313131",
             button_hover_color="#3e3e3e",
             button_corner_radius=12,
         )
+        total_dialog._label.configure(font=self.custom_font, text_color="#eeeeee")
+        total_dialog._entry.configure(font=self.custom_font)
+        total_dialog._ok_button.configure(font=self.custom_font)
+        total_dialog._cancel_button.configure(font=self.custom_font)
+
         total_chapters = total_dialog.get_input()
         if total_chapters is None:
             return
@@ -167,14 +169,16 @@ class Application(tk.Tk):
         parts_dialog = ctk.CTkInputDialog(
             title="На сколько делим епт?",
             text="Введите количество частей в главе:",
-            text_font=self.custom_font,
-            button_font=self.custom_font,
             fg_color="#2f2f2f",
-            text_color="#eeeeee",
             button_fg_color="#313131",
             button_hover_color="#3e3e3e",
             button_corner_radius=12,
         )
+        parts_dialog._label.configure(font=self.custom_font, text_color="#eeeeee")
+        parts_dialog._entry.configure(font=self.custom_font)
+        parts_dialog._ok_button.configure(font=self.custom_font)
+        parts_dialog._cancel_button.configure(font=self.custom_font)
+
         parts_per_chapter = parts_dialog.get_input()
         if parts_per_chapter is None:
             return
