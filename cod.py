@@ -158,7 +158,7 @@ class Application(tk.Tk):
 
         # Создаем метку
         header_font = ctk.CTkFont(
-            family=custom_font.actual("family"), size=20, weight="bold"
+            family=custom_font.actual("family"), size=25, weight="bold"
         )
         self.label = ttk.Label(self.frame, text="Генератор Глав", font=header_font, style="Custom.TLabel")
         self.label.pack(pady=20)
