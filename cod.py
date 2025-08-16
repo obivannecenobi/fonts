@@ -21,9 +21,10 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
 class CustomInputDialog(ctk.CTkToplevel):
     """Simple dialog asking the user for a single line of text."""
 
-    def __init__(self, master, question: str, font: ctk.CTkFont):
+    def __init__(self, master, question: str, font: ctk.CTkFont, icon_path: str):
         super().__init__(master)
-        self.iconbitmap("")
+        self.icon_path = icon_path
+        self.iconbitmap(self.icon_path)
         self.title("")
         self.resizable(False, False)
         self.configure(fg_color="#2f2f2f")
@@ -104,7 +105,11 @@ class CustomInputDialog(ctk.CTkToplevel):
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.iconbitmap("")
+        self.icon_path = os.path.join(
+            os.path.dirname(__file__),
+            "ChatGPT Image 15 авг. 2025 г., 20_42_09.ico",
+        )
+        self.iconbitmap(self.icon_path)
 
         self.config_data = self.load_config()
 
@@ -231,7 +236,9 @@ class Application(tk.Tk):
             self.path_entry.insert(0, folder_selected)
 
     def ask_questions(self):
-        total_dialog = CustomInputDialog(self, "Сколько ебануть?", self.custom_font)
+        total_dialog = CustomInputDialog(
+            self, "Сколько ебануть?", self.custom_font, self.icon_path
+        )
 
         total_chapters = total_dialog.get_input()
         if total_chapters is None:
@@ -239,7 +246,10 @@ class Application(tk.Tk):
         total_chapters = int(total_chapters)
 
         parts_dialog = CustomInputDialog(
-            self, "Введите количество частей в главе:", self.custom_font
+            self,
+            "Введите количество частей в главе:",
+            self.custom_font,
+            self.icon_path,
         )
 
         parts_per_chapter = parts_dialog.get_input()
@@ -289,7 +299,7 @@ class Application(tk.Tk):
 
     def show_popup(self, message):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        popup.iconbitmap("")
+        popup.iconbitmap(self.icon_path)
         popup.title("")
         popup.geometry("300x100")
 
@@ -324,7 +334,7 @@ class Application(tk.Tk):
 
     def show_font_settings(self):
         top = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        top.iconbitmap("")
+        top.iconbitmap(self.icon_path)
         top.title("")
 
         frame = ctk.CTkFrame(top, corner_radius=12, fg_color="#2f2f2f")
