@@ -204,8 +204,8 @@ class Application(tk.Tk):
             entry_text_color="#303030",
             font=self.custom_font,
         )
-        total_dialog.iconbitmap("")
         style_dialog(total_dialog, "Введите количество глав:")
+        total_dialog.iconbitmap("")
 
         total_chapters = total_dialog.get_input()
         if total_chapters is None:
@@ -224,8 +224,8 @@ class Application(tk.Tk):
             entry_text_color="#303030",
             font=self.custom_font,
         )
-        parts_dialog.iconbitmap("")
         style_dialog(parts_dialog, "Введите количество частей в главе:")
+        parts_dialog.iconbitmap("")
 
         parts_per_chapter = parts_dialog.get_input()
         if parts_per_chapter is None:
