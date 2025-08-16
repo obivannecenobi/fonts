@@ -150,8 +150,11 @@ class Application(tk.Tk):
 
     def ask_questions(self):
         def style_dialog(d):
-            d._ok_button.configure(corner_radius=12)
-            d._cancel_button.configure(corner_radius=12)
+            if hasattr(d, "_ok_button"):
+                d._ok_button.configure(corner_radius=12, text_color="#eeeeee")
+                d._cancel_button.configure(corner_radius=12, text_color="#eeeeee")
+            else:
+                d.after(20, lambda: style_dialog(d))
 
         total_dialog = ctk.CTkInputDialog(
             title="Сколько ебануть?",
@@ -164,7 +167,7 @@ class Application(tk.Tk):
             entry_text_color="#303030",
             font=self.custom_font,
         )
-        total_dialog.after(0, lambda: style_dialog(total_dialog))
+        style_dialog(total_dialog)
 
         total_chapters = total_dialog.get_input()
         if total_chapters is None:
@@ -182,7 +185,7 @@ class Application(tk.Tk):
             entry_text_color="#303030",
             font=self.custom_font,
         )
-        parts_dialog.after(0, lambda: style_dialog(parts_dialog))
+        style_dialog(parts_dialog)
 
         parts_per_chapter = parts_dialog.get_input()
         if parts_per_chapter is None:
