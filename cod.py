@@ -23,6 +23,7 @@ class CustomInputDialog(ctk.CTkToplevel):
 
     def __init__(self, master, question: str, font: ctk.CTkFont):
         super().__init__(master)
+        self.iconbitmap("")
         self.title("")
         self.resizable(False, False)
         self.configure(fg_color="#2f2f2f")
@@ -290,8 +291,8 @@ class Application(tk.Tk):
 
     def show_popup(self, message):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        popup.geometry("300x100")
         popup.iconbitmap("")
+        popup.geometry("300x100")
 
         frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
         frame.pack(fill="both", expand=True)
