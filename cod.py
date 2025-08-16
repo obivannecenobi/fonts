@@ -273,17 +273,20 @@ class Application(tk.Tk):
         self.destroy()
 
     def show_popup(self, message, color="green"):
-        popup = ctk.CTkToplevel(self, fg_color="#2f2f2f", corner_radius=12)
+        popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         popup.geometry("300x100")
         popup.title("Результат")
 
+        frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
+        frame.pack(fill="both", expand=True)
+
         label = ctk.CTkLabel(
-            popup, text=message, font=self.custom_font, text_color=color
+            frame, text=message, font=self.custom_font, text_color=color
         )
         label.pack(pady=20)
 
         close_button = ctk.CTkButton(
-            popup,
+            frame,
             text="Закрыть",
             command=popup.destroy,
             corner_radius=12,
@@ -297,9 +300,13 @@ class Application(tk.Tk):
         close_button.pack(pady=5)
 
     def show_font_settings(self):
-        top = ctk.CTkToplevel(self, fg_color="#2f2f2f", corner_radius=12)
+        top = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         top.title("Font size")
-        slider = ctk.CTkSlider(top, from_=8, to=32)
+
+        frame = ctk.CTkFrame(top, corner_radius=12, fg_color="#2f2f2f")
+        frame.pack(fill="both", expand=True)
+
+        slider = ctk.CTkSlider(frame, from_=8, to=32)
         slider.set(self.custom_font.cget("size"))
         slider.pack(padx=20, pady=20)
 
@@ -312,7 +319,7 @@ class Application(tk.Tk):
             top.destroy()
 
         apply_button = ctk.CTkButton(
-            top,
+            frame,
             text="Apply",
             command=apply,
             corner_radius=12,
