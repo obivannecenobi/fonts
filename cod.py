@@ -137,6 +137,7 @@ class Application(tk.Tk):
         font_size = int(self.config_data.get("font_size", base_size))
         custom_font = ctk.CTkFont(family=font_family, size=font_size)
         self.custom_font = custom_font
+        self.config_data["font_size"] = str(font_size)
         self.option_add("*Font", custom_font)
 
         self.style = ttk.Style(self)
@@ -212,22 +213,6 @@ class Application(tk.Tk):
         )
         self.browse_button.pack(pady=10)
 
-        # Button to adjust font size
-        self.font_button = ctk.CTkButton(
-            self,
-            text="A",
-            width=24,
-            height=24,
-            command=self.show_font_settings,
-            corner_radius=12,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
-            bg_color="#2f2f2f",
-            text_color="#eeeeee",
-            border_width=0,
-            font=self.custom_font,
-        )
-        self.font_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
 
     def browse_folder(self):
         folder_selected = filedialog.askdirectory(title="Выберите папку для сохранения")
@@ -247,7 +232,7 @@ class Application(tk.Tk):
 
         parts_dialog = CustomInputDialog(
             self,
-            "Введите количество частей в главе:",
+            "На сколько частей делим?",
             self.custom_font,
             self.icon_path,
         )
@@ -293,7 +278,7 @@ class Application(tk.Tk):
 
     def on_closing(self):
         self.config_data["geometry"] = self.geometry()
-        self.config_data.setdefault("font_size", str(self.custom_font.cget("size")))
+        self.config_data["font_size"] = str(self.custom_font.cget("size"))
         self.save_config()
         self.destroy()
 
@@ -331,39 +316,6 @@ class Application(tk.Tk):
             font=self.custom_font,
         )
         close_button.pack(pady=5)
-
-    def show_font_settings(self):
-        top = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        top.iconbitmap(self.icon_path)
-        top.title("")
-
-        frame = ctk.CTkFrame(top, corner_radius=12, fg_color="#2f2f2f")
-        frame.pack(fill="both", expand=True)
-
-        slider = ctk.CTkSlider(frame, from_=8, to=32)
-        slider.set(self.custom_font.cget("size"))
-        slider.pack(padx=20, pady=20)
-
-        def apply():
-            size = int(slider.get())
-            self.custom_font.configure(size=size)
-            self.option_add("*Font", self.custom_font)
-            self.config_data["font_size"] = str(size)
-            self.save_config()
-            top.destroy()
-
-        apply_button = ctk.CTkButton(
-            frame,
-            text="Apply",
-            command=apply,
-            corner_radius=12,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
-            bg_color="#2f2f2f",
-            text_color="#eeeeee",
-            border_width=0,
-        )
-        apply_button.pack(pady=10)
 
     def load_config(self):
         config = {}
