@@ -10,7 +10,7 @@ import os
 import sys
 import time
 import tkinter as tk
-from tkinter import filedialog, simpledialog, ttk
+from tkinter import filedialog, ttk
 from tkinter import font as tkfont
 
 import customtkinter as ctk
@@ -150,8 +150,23 @@ class Application(tk.Tk):
             self.path_entry.insert(0, folder_selected)
 
     def ask_questions(self):
-        total_chapters = simpledialog.askinteger("Сколько ебануть?", "Введите количество глав:", parent=self, minvalue=1, maxvalue=100)
-        parts_per_chapter = simpledialog.askinteger("На сколько делим епт?", "Введите количество частей в главе:", parent=self, minvalue=1, maxvalue=10)
+        total_dialog = ctk.CTkInputDialog(
+            title="Сколько ебануть?",
+            text="Введите количество глав:",
+        )
+        total_chapters = total_dialog.get_input()
+        if total_chapters is None:
+            return
+        total_chapters = int(total_chapters)
+
+        parts_dialog = ctk.CTkInputDialog(
+            title="На сколько делим епт?",
+            text="Введите количество частей в главе:",
+        )
+        parts_per_chapter = parts_dialog.get_input()
+        if parts_per_chapter is None:
+            return
+        parts_per_chapter = int(parts_per_chapter)
 
         save_location = self.path_entry.get()
 
@@ -204,35 +219,17 @@ class Application(tk.Tk):
         label = ttk.Label(popup, text=message, style="Popup.TLabel")
         label.pack(pady=20)
 
-        close_frame = ctk.CTkFrame(
-            popup,
-            fg_color="#FFFFFF",
-            width=200,
-            height=50,
-            corner_radius=12,
-        )
-        close_frame.pack(pady=5)
-        close_frame.pack_propagate(False)
-        close_glow = ctk.CTkLabel(
-            close_frame,
-            text="",
-            fg_color="#E0E0E0",
-            corner_radius=12,
-        )
-        close_glow.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
         close_button = ctk.CTkButton(
-            close_frame,
+            popup,
             text="Закрыть",
             command=popup.destroy,
             corner_radius=12,
-            fg_color="transparent",
-            text_color="#313131",
-            hover_color="#FFFFFF",
-            border_color="white",
-            border_width=2,
+            bg_color="#2f2f2f",
+            fg_color="#313131",
+            hover_color="#3e3e3e",
             font=self.custom_font,
         )
-        close_button.place(relx=0.5, rely=0.5, anchor="center")
+        close_button.pack(pady=5)
 
 if __name__ == "__main__":
     app = Application()
