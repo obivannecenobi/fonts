@@ -190,6 +190,8 @@ class Application(tk.Tk):
                         text_color="#303030",
                         border_width=0,
                     )
+                if hasattr(d, "_label"):
+                    d._label.configure(text_color="#eeeeee", font=self.custom_font)
             else:
                 d.after(20, lambda: style_dialog(d))
 
@@ -206,7 +208,7 @@ class Application(tk.Tk):
             font=self.custom_font,
         )
         total_dialog._window.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
-        style_dialog(total_dialog)
+        total_dialog.after(20, lambda: style_dialog(total_dialog))
 
         total_chapters = total_dialog.get_input()
         if total_chapters is None:
@@ -226,7 +228,7 @@ class Application(tk.Tk):
             font=self.custom_font,
         )
         parts_dialog._window.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
-        style_dialog(parts_dialog)
+        parts_dialog.after(20, lambda: style_dialog(parts_dialog))
 
         parts_per_chapter = parts_dialog.get_input()
         if parts_per_chapter is None:
