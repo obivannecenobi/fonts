@@ -264,7 +264,7 @@ class Application(tk.Tk):
         self.show_message(f"Создано {total_chapters * parts_per_chapter} файлов в папке {folder_for_chapters}")
 
     def show_message(self, message):
-        self.show_popup(message)
+        self.show_popup("Готово, епт")
 
     def show_error(self, message):
         self.show_popup("Готово, епт")
@@ -278,7 +278,7 @@ class Application(tk.Tk):
     def show_popup(self, message):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         popup.geometry("300x100")
-        popup.title("Результат")
+        popup.iconbitmap("")
 
         frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
         frame.pack(fill="both", expand=True)
