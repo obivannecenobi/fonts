@@ -87,7 +87,7 @@ class Application(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Создаем рамку для текста
-        self.frame = ttk.Frame(self, style="Custom.TFrame")
+        self.frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
         self.frame.pack(padx=20, pady=20, expand=True, fill="both")
 
         # Создаем метку
@@ -106,6 +106,8 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
             font=self.custom_font,
         )
         self.ask_button.pack(pady=10)
@@ -119,8 +121,8 @@ class Application(tk.Tk):
         self.path_entry = ctk.CTkEntry(
             self.frame,
             corner_radius=12,
-            fg_color="#ffffff",
-            text_color="#303030",
+            fg_color="#313131",
+            text_color="#eeeeee",
             border_color="#2f2f2f",
             border_width=0,
             bg_color="#2f2f2f",
@@ -137,6 +139,8 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
             font=self.custom_font,
         )
         self.browse_button.pack(pady=10)
@@ -151,6 +155,9 @@ class Application(tk.Tk):
             corner_radius=12,
             fg_color="#313131",
             hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
             font=self.custom_font,
         )
         self.font_button.place(relx=1.0, rely=0.0, x=-10, y=10, anchor="ne")
@@ -164,8 +171,26 @@ class Application(tk.Tk):
     def ask_questions(self):
         def style_dialog(d):
             if hasattr(d, "_ok_button"):
-                d._ok_button.configure(corner_radius=12, text_color="#eeeeee")
-                d._cancel_button.configure(corner_radius=12, text_color="#eeeeee")
+                d._ok_button.configure(
+                    bg_color="#2f2f2f",
+                    corner_radius=12,
+                    text_color="#eeeeee",
+                    border_width=0,
+                )
+                d._cancel_button.configure(
+                    bg_color="#2f2f2f",
+                    corner_radius=12,
+                    text_color="#eeeeee",
+                    border_width=0,
+                )
+                if hasattr(d, "_entry"):
+                    d._entry.configure(
+                        bg_color="#2f2f2f",
+                        fg_color="#313131",
+                        corner_radius=12,
+                        text_color="#eeeeee",
+                        border_width=0,
+                    )
             else:
                 d.after(20, lambda: style_dialog(d))
 
@@ -176,8 +201,9 @@ class Application(tk.Tk):
             text_color="#eeeeee",
             button_fg_color="#313131",
             button_hover_color="#3e3e3e",
-            entry_fg_color="#ffffff",
-            entry_text_color="#303030",
+            entry_fg_color="#313131",
+            entry_border_color="#2f2f2f",
+            entry_text_color="#eeeeee",
             font=self.custom_font,
         )
         style_dialog(total_dialog)
@@ -194,8 +220,9 @@ class Application(tk.Tk):
             text_color="#eeeeee",
             button_fg_color="#313131",
             button_hover_color="#3e3e3e",
-            entry_fg_color="#ffffff",
-            entry_text_color="#303030",
+            entry_fg_color="#313131",
+            entry_border_color="#2f2f2f",
+            entry_text_color="#eeeeee",
             font=self.custom_font,
         )
         style_dialog(parts_dialog)
@@ -263,6 +290,8 @@ class Application(tk.Tk):
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            border_width=0,
             font=self.custom_font,
         )
         close_button.pack(pady=5)
@@ -289,6 +318,9 @@ class Application(tk.Tk):
             corner_radius=12,
             fg_color="#313131",
             hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
         )
         apply_button.pack(pady=10)
 
