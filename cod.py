@@ -61,8 +61,7 @@ class Application(tk.Tk):
                 font_family = tkfont.nametofont("TkDefaultFont").actual("family")
         default_font = tkfont.nametofont("TkDefaultFont")
         custom_font = ctk.CTkFont(
-            family=font_family,
-            size=default_font.cget("size") + 4,
+            family=font_family, size=default_font.cget("size") + 4
         )
         self.custom_font = custom_font
         self.option_add("*Font", custom_font)
@@ -93,7 +92,9 @@ class Application(tk.Tk):
         self.frame.pack(padx=20, pady=20, expand=True, fill="both")
 
         # Создаем метку
-        header_font = ctk.CTkFont(family=custom_font.actual("family"), size=18, weight="bold")
+        header_font = ctk.CTkFont(
+            family=custom_font.actual("family"), size=20, weight="bold"
+        )
         self.label = ttk.Label(self.frame, text="Генератор Глав", font=header_font, style="Custom.TLabel")
         self.label.pack(pady=20)
 
