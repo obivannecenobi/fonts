@@ -114,13 +114,9 @@ class Application(tk.Tk):
         self.ask_button.pack(pady=10)
 
         # Поле для ввода пути с кнопкой
-        self.path_label = ttk.Label(
-            self.frame, text="Выберите путь для сохранения:", style="Custom.TLabel"
-        )
-        self.path_label.pack(pady=10)
-
         self.path_entry = ctk.CTkEntry(
             self.frame,
+            placeholder_text="Куда сейвим?",
             corner_radius=12,
             fg_color="#ffffff",
             text_color="#303030",
