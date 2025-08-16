@@ -262,7 +262,7 @@ class Application(tk.Tk):
         self.show_popup(message)
 
     def show_error(self, message):
-        self.show_popup(message, "red")
+        self.show_popup("Готово, епт")
 
     def on_closing(self):
         self.config_data["geometry"] = self.geometry()
@@ -270,7 +270,7 @@ class Application(tk.Tk):
         self.save_config()
         self.destroy()
 
-    def show_popup(self, message, color="green"):
+    def show_popup(self, message):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         popup.geometry("300x100")
         popup.title("Результат")
@@ -279,7 +279,14 @@ class Application(tk.Tk):
         frame.pack(fill="both", expand=True)
 
         label = ctk.CTkLabel(
-            frame, text=message, font=self.custom_font, text_color=color
+            frame,
+            text=message,
+            text_color="#00ff00",
+            font=ctk.CTkFont(
+                family=self.custom_font.actual("family"),
+                size=self.custom_font.cget("size"),
+                weight="bold",
+            ),
         )
         label.pack(pady=20)
 
