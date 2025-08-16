@@ -220,15 +220,13 @@ class Application(tk.Tk):
         self.destroy()
 
     def show_popup(self, message, color="green"):
-        popup = tk.Toplevel(self)
+        popup = ctk.CTkToplevel(self, fg_color="#2f2f2f", corner_radius=12)
         popup.geometry("300x100")
         popup.title("Результат")
-        popup.configure(bg="#2f2f2f")
 
-        style = ttk.Style(popup)
-        style.configure("Popup.TLabel", background="#2f2f2f", foreground=color)
-
-        label = ttk.Label(popup, text=message, style="Popup.TLabel")
+        label = ctk.CTkLabel(
+            popup, text=message, font=self.custom_font, text_color=color
+        )
         label.pack(pady=20)
 
         close_button = ctk.CTkButton(
