@@ -38,6 +38,7 @@ class Application(tk.Tk):
         super().__init__()
         icon_path = os.path.join(os.path.dirname(__file__), "icons", "code.png")
         ensure_icon(icon_path)
+        self.icon_path = icon_path
         self.iconphoto(True, tk.PhotoImage(file=icon_path))
 
         self.config_data = self.load_config()
@@ -171,24 +172,22 @@ class Application(tk.Tk):
     def ask_questions(self):
         def style_dialog(d):
             if hasattr(d, "_ok_button"):
-                d._ok_button.configure(
-                    bg_color="#2f2f2f",
-                    corner_radius=12,
-                    text_color="#eeeeee",
-                    border_width=0,
-                )
-                d._cancel_button.configure(
-                    bg_color="#2f2f2f",
-                    corner_radius=12,
-                    text_color="#eeeeee",
-                    border_width=0,
-                )
+                for btn in (d._ok_button, d._cancel_button):
+                    btn.configure(
+                        bg_color="#2f2f2f",
+                        fg_color="#313131",
+                        hover_color="#3e3e3e",
+                        corner_radius=12,
+                        text_color="#eeeeee",
+                        border_width=0,
+                    )
                 if hasattr(d, "_entry"):
                     d._entry.configure(
                         bg_color="#2f2f2f",
-                        fg_color="#313131",
+                        fg_color="#ffffff",
+                        border_color="#2f2f2f",
                         corner_radius=12,
-                        text_color="#eeeeee",
+                        text_color="#303030",
                         border_width=0,
                     )
             else:
@@ -201,11 +200,12 @@ class Application(tk.Tk):
             text_color="#eeeeee",
             button_fg_color="#313131",
             button_hover_color="#3e3e3e",
-            entry_fg_color="#313131",
+            entry_fg_color="#ffffff",
             entry_border_color="#2f2f2f",
-            entry_text_color="#eeeeee",
+            entry_text_color="#303030",
             font=self.custom_font,
         )
+        total_dialog._window.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
         style_dialog(total_dialog)
 
         total_chapters = total_dialog.get_input()
@@ -220,11 +220,12 @@ class Application(tk.Tk):
             text_color="#eeeeee",
             button_fg_color="#313131",
             button_hover_color="#3e3e3e",
-            entry_fg_color="#313131",
+            entry_fg_color="#ffffff",
             entry_border_color="#2f2f2f",
-            entry_text_color="#eeeeee",
+            entry_text_color="#303030",
             font=self.custom_font,
         )
+        parts_dialog._window.wm_iconphoto(True, tk.PhotoImage(file=self.icon_path))
         style_dialog(parts_dialog)
 
         parts_per_chapter = parts_dialog.get_input()
