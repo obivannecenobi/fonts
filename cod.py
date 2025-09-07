@@ -8,6 +8,7 @@ import ctypes
 import os
 import sys
 import time
+import re
 import tkinter as tk
 from tkinter import filedialog, ttk
 from tkinter import font as tkfont
@@ -213,12 +214,63 @@ class Application(tk.Tk):
         )
         self.browse_button.pack(pady=10)
 
+        # Button to split document into chapters
+        self.split_button = ctk.CTkButton(
+            self.frame,
+            text="Разбить!",
+            command=self.split_document,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.split_button.pack(pady=10)
+
 
     def browse_folder(self):
         folder_selected = filedialog.askdirectory(title="Выберите папку для сохранения")
         if folder_selected:
             self.path_entry.delete(0, tk.END)
             self.path_entry.insert(0, folder_selected)
+
+    def split_document(self):
+        file_path = filedialog.askopenfilename(
+            title="Выберите документ",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not file_path:
+            return
+
+        heading_pattern = re.compile(r"^Глава\s+\d+(?:\.\d+)?")
+        document = Document(file_path)
+        current_doc = None
+        current_title = ""
+        output_dir = os.path.dirname(file_path)
+
+        for para in document.paragraphs:
+            text = para.text.strip()
+            if heading_pattern.match(text):
+                if current_doc is not None:
+                    sanitized = re.sub(r"[^\w\s.-]", "", current_title).strip()
+                    if not sanitized:
+                        sanitized = "section"
+                    file_name = f"{sanitized}.docx"
+                    current_doc.save(os.path.join(output_dir, file_name))
+                current_doc = Document()
+                current_title = text
+            else:
+                if current_doc is not None:
+                    current_doc.add_paragraph(para.text)
+
+        if current_doc is not None:
+            sanitized = re.sub(r"[^\w\s.-]", "", current_title).strip()
+            if not sanitized:
+                sanitized = "section"
+            file_name = f"{sanitized}.docx"
+            current_doc.save(os.path.join(output_dir, file_name))
 
     def ask_questions(self):
         total_dialog = CustomInputDialog(
