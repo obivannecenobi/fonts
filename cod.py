@@ -34,10 +34,15 @@ def split_document(file_path: str) -> List[str]:
     """
 
     heading_pattern = re.compile(r"^Глава\s+\d+(?:\.\d+)?")
+    output_dir = filedialog.askdirectory(
+        title="Выберите выходной каталог",
+        initialdir=os.path.dirname(file_path),
+    )
+    if not output_dir:
+        output_dir = os.path.dirname(file_path)
     document = Document(file_path)
     current_doc = None
     current_title = ""
-    output_dir = os.path.dirname(file_path)
     created_files: List[str] = []
 
     for para in document.paragraphs:
