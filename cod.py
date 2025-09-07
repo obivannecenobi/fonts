@@ -13,6 +13,7 @@ import tkinter as tk
 from tkinter import filedialog, ttk
 from tkinter import font as tkfont
 
+import copy
 import customtkinter as ctk
 from docx import Document
 from typing import List
@@ -54,7 +55,8 @@ def split_document(file_path: str) -> List[str]:
             current_title = text
         else:
             if current_doc is not None:
-                current_doc.add_paragraph(para.text)
+                new_element = copy.deepcopy(para._element)
+                current_doc._element.body.append(new_element)
 
     if current_doc is not None:
         sanitized = re.sub(r"[^\w\s.-]", "", current_title).strip()
