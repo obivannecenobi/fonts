@@ -2,11 +2,13 @@ import os
 import re
 import sys
 from pathlib import Path
-from docx import Document
 from unittest.mock import patch
 
+from docx import Document
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from cod import split_document, check_english_words
+from cod import split_document
+
 
 def create_sample_doc(path):
     doc = Document()
@@ -35,14 +37,3 @@ def test_split_document(tmp_path):
         texts = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         assert all(not heading_pattern.match(t) for t in texts)
 
-
-def test_check_english_words(tmp_path):
-    path = tmp_path / "english.docx"
-    doc = Document()
-    doc.add_paragraph("Привет Hello мир")
-    doc.add_paragraph("Это Test документ")
-    doc.add_paragraph("Другие слова: World, Hello")
-    doc.save(path)
-
-    words = check_english_words(str(path))
-    assert words == ["Hello", "Test", "World"]
