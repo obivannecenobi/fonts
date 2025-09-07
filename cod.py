@@ -505,7 +505,6 @@ class Application(tk.Tk):
         button_frame.pack(pady=(0, 10))
 
         def submit():
-            dialog.destroy()
             book_url = inputs["book_url"].get().strip()
             username = inputs["username"].get().strip() or None
             password = inputs["password"].get() or None
@@ -514,6 +513,8 @@ class Application(tk.Tk):
             publish_at = inputs["publish_at"].get().strip() or None
             deferred = bool(deferred_var.get())
             subscription = bool(subscription_var.get())
+
+            dialog.destroy()
 
             try:
                 results = upload_chapters(
