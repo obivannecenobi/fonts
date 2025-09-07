@@ -28,6 +28,8 @@ def upload_chapters(
     book_url: str,
     files: Iterable[str],
     *,
+    login: str | None = None,
+    password: str | None = None,
     deferred: bool = False,
     subscription: bool = False,
     volume: int | None = None,
@@ -43,6 +45,11 @@ def upload_chapters(
         ``/chapter/new`` endpoint of this URL when uploading.
     files:
         Iterable of paths to chapter documents that should be uploaded.
+    login:
+        Username for authentication. If provided with ``password`` the function
+        will attempt to log in before uploading.
+    password:
+        Password for authentication. Used together with ``login``.
     deferred:
         If ``True`` the chapters will be marked as deferred (draft mode).
     subscription:
@@ -72,6 +79,27 @@ def upload_chapters(
     results: Dict[str, bool] = {}
 
     try:
+        if login and password:
+            try:
+                driver.get("https://tl.rulate.ru/user/login")
+                login_input = wait.until(
+                    EC.presence_of_element_located((By.NAME, "login"))
+                )
+                pass_input = driver.find_element(By.NAME, "password")
+                login_input.send_keys(login)
+                pass_input.send_keys(password)
+                pass_input.submit()
+                try:
+                    wait.until(
+                        EC.presence_of_element_located(
+                            (By.XPATH, "//a[contains(@href, 'logout')]")
+                        )
+                    )
+                except TimeoutException:
+                    pass
+            except Exception:
+                pass
+
         for file_path in files:
             # Navigate to the upload page for a new chapter
             driver.get(os.path.join(book_url, "chapter", "new"))
