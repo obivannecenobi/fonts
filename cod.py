@@ -45,6 +45,15 @@ def split_document(file_path: str) -> List[str]:
     current_title = ""
     created_files: List[str] = []
 
+    def _unique_path(directory: str, filename: str) -> str:
+        base, ext = os.path.splitext(filename)
+        candidate = os.path.join(directory, filename)
+        counter = 2
+        while os.path.exists(candidate):
+            candidate = os.path.join(directory, f"{base} ({counter}){ext}")
+            counter += 1
+        return candidate
+
     for para in document.paragraphs:
         text = para.text.strip()
         if heading_pattern.match(text):
@@ -53,7 +62,7 @@ def split_document(file_path: str) -> List[str]:
                 if not sanitized:
                     sanitized = "section"
                 file_name = f"{sanitized}.docx"
-                out_path = os.path.join(output_dir, file_name)
+                out_path = _unique_path(output_dir, file_name)
                 current_doc.save(out_path)
                 created_files.append(out_path)
             current_doc = Document()
@@ -68,7 +77,7 @@ def split_document(file_path: str) -> List[str]:
         if not sanitized:
             sanitized = "section"
         file_name = f"{sanitized}.docx"
-        out_path = os.path.join(output_dir, file_name)
+        out_path = _unique_path(output_dir, file_name)
         current_doc.save(out_path)
         created_files.append(out_path)
 
