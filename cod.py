@@ -473,6 +473,19 @@ class Application(tk.Tk):
                 font=self.custom_font,
             )
             entry.pack(fill=tk.X, padx=10, pady=(0, 10))
+
+            # Enable clipboard operations
+            entry.bind("<Control-v>", lambda e: e.widget.event_generate("<<Paste>>"))
+            entry.bind("<Control-V>", lambda e: e.widget.event_generate("<<Paste>>"))
+
+            def _show_menu(event, widget=entry):
+                menu = tk.Menu(widget, tearoff=0)
+                menu.add_command(
+                    label="Вставить", command=lambda: widget.event_generate("<<Paste>>")
+                )
+                menu.tk_popup(event.x_root, event.y_root)
+
+            entry.bind("<Button-3>", _show_menu)
             inputs[key] = entry
 
         deferred_var = tk.BooleanVar()
