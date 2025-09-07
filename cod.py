@@ -229,6 +229,21 @@ class Application(tk.Tk):
         )
         self.split_button.pack(pady=10)
 
+        # Button to search for English words
+        self.artifacts_button = ctk.CTkButton(
+            self.frame,
+            text="Проверка на артефакты",
+            command=self.check_english_words,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.artifacts_button.pack(pady=10)
+
 
     def browse_folder(self):
         folder_selected = filedialog.askdirectory(title="Выберите папку для сохранения")
@@ -271,6 +286,78 @@ class Application(tk.Tk):
                 sanitized = "section"
             file_name = f"{sanitized}.docx"
             current_doc.save(os.path.join(output_dir, file_name))
+
+    def check_english_words(self):
+        file_path = filedialog.askopenfilename(
+            title="Выберите документ",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not file_path:
+            return
+
+        document = Document(file_path)
+        text = "\n".join(p.text for p in document.paragraphs)
+        words = re.findall(r"[A-Za-z]+", text)
+        unique_words = sorted(set(words))
+
+        if not unique_words:
+            self.show_popup("Английские слова не найдены.")
+            return
+
+        popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
+        popup.iconbitmap(self.icon_path)
+        popup.title("")
+        popup.geometry("400x400")
+
+        textbox = ctk.CTkTextbox(
+            popup,
+            fg_color="#ffffff",
+            text_color="#303030",
+        )
+        textbox.pack(expand=True, fill="both", padx=10, pady=10)
+        textbox.insert("1.0", "\n".join(unique_words))
+        textbox.configure(state="disabled")
+
+        button_frame = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+        button_frame.pack(pady=(0, 10))
+
+        if len(unique_words) > 50:
+            save_button = ctk.CTkButton(
+                button_frame,
+                text="Сохранить",
+                command=lambda: self.save_words_to_file(unique_words),
+                corner_radius=12,
+                bg_color="#2f2f2f",
+                fg_color="#313131",
+                hover_color="#3e3e3e",
+                text_color="#eeeeee",
+                border_width=0,
+                font=self.custom_font,
+            )
+            save_button.pack(side="left", padx=(0, 10))
+
+        close_button = ctk.CTkButton(
+            button_frame,
+            text="Закрыть",
+            command=popup.destroy,
+            corner_radius=12,
+            bg_color="#2f2f2f",
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        close_button.pack(side="left")
+
+    def save_words_to_file(self, words):
+        folder = filedialog.askdirectory(title="Выберите папку для сохранения списка")
+        if not folder:
+            return
+        file_path = os.path.join(folder, "english_words.txt")
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(words))
+        self.show_popup(f"Список сохранен в {file_path}")
 
     def ask_questions(self):
         total_dialog = CustomInputDialog(
