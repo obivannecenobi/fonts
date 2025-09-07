@@ -15,6 +15,66 @@ from tkinter import font as tkfont
 
 import customtkinter as ctk
 from docx import Document
+from typing import List
+
+
+def split_document(file_path: str) -> List[str]:
+    """Split a DOCX document into chapters based on heading pattern.
+
+    Parameters
+    ----------
+    file_path: str
+        Path to the source DOCX file.
+
+    Returns
+    -------
+    List[str]
+        List of paths to the created chapter files.
+    """
+
+    heading_pattern = re.compile(r"^Глава\s+\d+(?:\.\d+)?")
+    document = Document(file_path)
+    current_doc = None
+    current_title = ""
+    output_dir = os.path.dirname(file_path)
+    created_files: List[str] = []
+
+    for para in document.paragraphs:
+        text = para.text.strip()
+        if heading_pattern.match(text):
+            if current_doc is not None:
+                sanitized = re.sub(r"[^\w\s.-]", "", current_title).strip()
+                if not sanitized:
+                    sanitized = "section"
+                file_name = f"{sanitized}.docx"
+                out_path = os.path.join(output_dir, file_name)
+                current_doc.save(out_path)
+                created_files.append(out_path)
+            current_doc = Document()
+            current_title = text
+        else:
+            if current_doc is not None:
+                current_doc.add_paragraph(para.text)
+
+    if current_doc is not None:
+        sanitized = re.sub(r"[^\w\s.-]", "", current_title).strip()
+        if not sanitized:
+            sanitized = "section"
+        file_name = f"{sanitized}.docx"
+        out_path = os.path.join(output_dir, file_name)
+        current_doc.save(out_path)
+        created_files.append(out_path)
+
+    return created_files
+
+
+def check_english_words(file_path: str) -> List[str]:
+    """Return sorted unique English words found in a DOCX document."""
+
+    document = Document(file_path)
+    text = "\n".join(p.text for p in document.paragraphs)
+    words = re.findall(r"[A-Za-z]+", text)
+    return sorted(set(words))
 
 # Path to store window geometry
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
@@ -259,33 +319,7 @@ class Application(tk.Tk):
         if not file_path:
             return
 
-        heading_pattern = re.compile(r"^Глава\s+\d+(?:\.\d+)?")
-        document = Document(file_path)
-        current_doc = None
-        current_title = ""
-        output_dir = os.path.dirname(file_path)
-
-        for para in document.paragraphs:
-            text = para.text.strip()
-            if heading_pattern.match(text):
-                if current_doc is not None:
-                    sanitized = re.sub(r"[^\w\s.-]", "", current_title).strip()
-                    if not sanitized:
-                        sanitized = "section"
-                    file_name = f"{sanitized}.docx"
-                    current_doc.save(os.path.join(output_dir, file_name))
-                current_doc = Document()
-                current_title = text
-            else:
-                if current_doc is not None:
-                    current_doc.add_paragraph(para.text)
-
-        if current_doc is not None:
-            sanitized = re.sub(r"[^\w\s.-]", "", current_title).strip()
-            if not sanitized:
-                sanitized = "section"
-            file_name = f"{sanitized}.docx"
-            current_doc.save(os.path.join(output_dir, file_name))
+        split_document(file_path)
 
     def check_english_words(self):
         file_path = filedialog.askopenfilename(
@@ -295,10 +329,7 @@ class Application(tk.Tk):
         if not file_path:
             return
 
-        document = Document(file_path)
-        text = "\n".join(p.text for p in document.paragraphs)
-        words = re.findall(r"[A-Za-z]+", text)
-        unique_words = sorted(set(words))
+        unique_words = check_english_words(file_path)
 
         if not unique_words:
             self.show_popup("Английские слова не найдены.")
