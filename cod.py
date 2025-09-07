@@ -16,7 +16,7 @@ from tkinter import font as tkfont
 import copy
 import customtkinter as ctk
 from docx import Document
-from typing import List
+from typing import Dict, List, Tuple
 
 
 def split_document(file_path: str) -> List[str]:
@@ -75,13 +75,17 @@ def split_document(file_path: str) -> List[str]:
     return created_files
 
 
-def check_english_words(file_path: str) -> List[str]:
-    """Return sorted unique English words found in a DOCX document."""
+def check_english_words(file_path: str) -> Dict[str, List[Tuple[int, int]]]:
+    """Return mapping of English words to their paragraph and character positions."""
 
     document = Document(file_path)
-    text = "\n".join(p.text for p in document.paragraphs)
-    words = re.findall(r"[A-Za-z]+", text)
-    return sorted(set(words))
+    results: Dict[str, List[Tuple[int, int]]] = {}
+    for p_idx, para in enumerate(document.paragraphs, start=1):
+        for match in re.finditer(r"[A-Za-z]+", para.text):
+            word = match.group()
+            char_pos = match.start() + 1  # 1-indexed character position
+            results.setdefault(word, []).append((p_idx, char_pos))
+    return {word: positions for word, positions in sorted(results.items())}
 
 # Path to store window geometry
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
@@ -338,9 +342,9 @@ class Application(tk.Tk):
         if not file_path:
             return
 
-        unique_words = check_english_words(file_path)
+        words_with_pos = check_english_words(file_path)
 
-        if not unique_words:
+        if not words_with_pos:
             self.show_popup("Английские слова не найдены.")
             return
 
@@ -349,23 +353,28 @@ class Application(tk.Tk):
         popup.title("")
         popup.geometry("400x400")
 
-        textbox = ctk.CTkTextbox(
-            popup,
-            fg_color="#ffffff",
-            text_color="#303030",
+        tree = ttk.Treeview(
+            popup, columns=("word", "paragraph"), show="headings"
         )
-        textbox.pack(expand=True, fill="both", padx=10, pady=10)
-        textbox.insert("1.0", "\n".join(unique_words))
-        textbox.configure(state="disabled")
+        tree.heading("word", text="Слово")
+        tree.heading("paragraph", text="№ параграфа")
+        tree.column("word", anchor="w")
+        tree.column("paragraph", anchor="center")
+
+        for word, positions in words_with_pos.items():
+            paragraphs = ", ".join(str(p) for p, _ in positions)
+            tree.insert("", "end", values=(word, paragraphs))
+
+        tree.pack(expand=True, fill="both", padx=10, pady=10)
 
         button_frame = ctk.CTkFrame(popup, fg_color="#2f2f2f")
         button_frame.pack(pady=(0, 10))
 
-        if len(unique_words) > 50:
+        if len(words_with_pos) > 50:
             save_button = ctk.CTkButton(
                 button_frame,
                 text="Сохранить",
-                command=lambda: self.save_words_to_file(unique_words),
+                command=lambda: self.save_words_to_file(words_with_pos),
                 corner_radius=12,
                 bg_color="#2f2f2f",
                 fg_color="#313131",
@@ -395,8 +404,12 @@ class Application(tk.Tk):
         if not folder:
             return
         file_path = os.path.join(folder, "english_words.txt")
+        lines = [
+            f"{word} - {', '.join(str(p) for p, _ in positions)}"
+            for word, positions in words.items()
+        ]
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(words))
+            f.write("\n".join(lines))
         self.show_popup(f"Список сохранен в {file_path}")
 
     def ask_questions(self):
