@@ -10,6 +10,8 @@ def main(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Upload chapter files to rulate.ru")
     parser.add_argument("book_url", help="Base URL of the book on rulate.ru")
     parser.add_argument("files", nargs="+", help="Chapter files to upload")
+    parser.add_argument("--username", help="Username for authentication")
+    parser.add_argument("--password", help="Password for authentication")
     parser.add_argument("--deferred", action="store_true", help="Upload chapters as deferred")
     parser.add_argument("--subscription", action="store_true", help="Require subscription to read")
     parser.add_argument("--volume", type=int, help="Volume number for uploaded chapters")
@@ -27,6 +29,8 @@ def main(argv: List[str] | None = None) -> None:
     results = upload_chapters(
         args.book_url,
         args.files,
+        username=args.username,
+        password=args.password,
         deferred=args.deferred,
         subscription=args.subscription,
         volume=args.volume,

@@ -454,7 +454,7 @@ class Application(tk.Tk):
         inputs = {}
         fields = [
             ("URL книги", "book_url", False),
-            ("Логин", "login", False),
+            ("Логин", "username", False),
             ("Пароль", "password", True),
             ("Том", "volume", False),
             ("Дата/время публикации", "publish_at", False),
@@ -507,7 +507,7 @@ class Application(tk.Tk):
         def submit():
             dialog.destroy()
             book_url = inputs["book_url"].get().strip()
-            login = inputs["login"].get().strip() or None
+            username = inputs["username"].get().strip() or None
             password = inputs["password"].get() or None
             volume_text = inputs["volume"].get().strip()
             volume = int(volume_text) if volume_text else None
@@ -519,7 +519,7 @@ class Application(tk.Tk):
                 results = upload_chapters(
                     book_url,
                     files,
-                    login=login,
+                    username=username,
                     password=password,
                     deferred=deferred,
                     subscription=subscription,
