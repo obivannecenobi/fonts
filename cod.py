@@ -410,10 +410,10 @@ class Application(tk.Tk):
         self.show_message(f"Создано {total_chapters * parts_per_chapter} файлов в папке {folder_for_chapters}")
 
     def show_message(self, message):
-        self.show_popup("Готово, епт")
+        self.show_popup(message)
 
     def show_error(self, message):
-        self.show_popup("Готово, епт")
+        self.show_popup(message, color="#ff0000")
 
     def on_closing(self):
         self.config_data["geometry"] = self.geometry()
@@ -421,7 +421,7 @@ class Application(tk.Tk):
         self.save_config()
         self.destroy()
 
-    def show_popup(self, message):
+    def show_popup(self, message, color="#00ff00"):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         popup.iconbitmap(self.icon_path)
         popup.title("")
@@ -433,7 +433,7 @@ class Application(tk.Tk):
         label = ctk.CTkLabel(
             frame,
             text=message,
-            text_color="#00ff00",
+            text_color=color,
             font=ctk.CTkFont(
                 family=self.custom_font.actual("family"),
                 size=self.custom_font.cget("size"),
