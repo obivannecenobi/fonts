@@ -3,6 +3,7 @@ import re
 import sys
 from pathlib import Path
 from docx import Document
+from unittest.mock import patch
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from cod import split_document, check_english_words
@@ -22,7 +23,8 @@ def test_split_document(tmp_path):
     source = tmp_path / "source.docx"
     create_sample_doc(source)
 
-    created_files = split_document(str(source))
+    with patch("cod.filedialog.askdirectory", return_value=str(tmp_path)):
+        created_files = split_document(str(source))
 
     expected_names = {"Глава 1.docx", "Глава 1.1.docx", "Глава 2.docx"}
     assert {os.path.basename(p) for p in created_files} == expected_names
