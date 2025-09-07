@@ -18,6 +18,8 @@ import customtkinter as ctk
 from docx import Document
 from typing import Dict, List, Tuple
 
+from rulate_uploader import upload_chapters
+
 
 def split_document(file_path: str) -> List[str]:
     """Split a DOCX document into chapters based on heading pattern.
@@ -324,6 +326,21 @@ class Application(tk.Tk):
         )
         self.artifacts_button.pack(pady=10)
 
+        # Button to upload chapters to Rulate
+        self.upload_button = ctk.CTkButton(
+            self.frame,
+            text="Залить на Rulate",
+            command=self.open_upload_dialog,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.upload_button.pack(pady=10)
+
 
     def browse_folder(self):
         folder_selected = filedialog.askdirectory(title="Выберите папку для сохранения")
@@ -420,6 +437,156 @@ class Application(tk.Tk):
         with open(file_path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
         self.show_popup(f"Список сохранен в {file_path}")
+
+    def open_upload_dialog(self):
+        files = filedialog.askopenfilenames(
+            title="Выберите главы",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not files:
+            return
+
+        dialog = ctk.CTkToplevel(self, fg_color="#2f2f2f")
+        dialog.iconbitmap(self.icon_path)
+        dialog.title("")
+
+        # Input fields
+        inputs = {}
+        fields = [
+            ("URL книги", "book_url", False),
+            ("Логин", "login", False),
+            ("Пароль", "password", True),
+            ("Том", "volume", False),
+            ("Дата/время публикации", "publish_at", False),
+        ]
+        for label_text, key, is_password in fields:
+            label = ctk.CTkLabel(dialog, text=label_text, text_color="#eeeeee", font=self.custom_font)
+            label.pack(padx=10, pady=(10, 0), anchor="w")
+            entry = ctk.CTkEntry(
+                dialog,
+                show="*" if is_password else None,
+                fg_color="#ffffff",
+                border_color="#2f2f2f",
+                text_color="#303030",
+                corner_radius=12,
+                border_width=0,
+                font=self.custom_font,
+            )
+            entry.pack(fill=tk.X, padx=10, pady=(0, 10))
+            inputs[key] = entry
+
+        deferred_var = tk.BooleanVar()
+        subscription_var = tk.BooleanVar()
+        deferred_cb = ctk.CTkCheckBox(
+            dialog,
+            text="Отложенная публикация",
+            variable=deferred_var,
+            text_color="#eeeeee",
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            border_width=0,
+            font=self.custom_font,
+        )
+        deferred_cb.pack(padx=10, pady=(0, 5), anchor="w")
+
+        subscription_cb = ctk.CTkCheckBox(
+            dialog,
+            text="Подписка",
+            variable=subscription_var,
+            text_color="#eeeeee",
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            border_width=0,
+            font=self.custom_font,
+        )
+        subscription_cb.pack(padx=10, pady=(0, 10), anchor="w")
+
+        button_frame = ctk.CTkFrame(dialog, fg_color="#2f2f2f")
+        button_frame.pack(pady=(0, 10))
+
+        def submit():
+            dialog.destroy()
+            book_url = inputs["book_url"].get().strip()
+            login = inputs["login"].get().strip() or None
+            password = inputs["password"].get() or None
+            volume_text = inputs["volume"].get().strip()
+            volume = int(volume_text) if volume_text else None
+            publish_at = inputs["publish_at"].get().strip() or None
+            deferred = bool(deferred_var.get())
+            subscription = bool(subscription_var.get())
+
+            try:
+                results = upload_chapters(
+                    book_url,
+                    files,
+                    login=login,
+                    password=password,
+                    deferred=deferred,
+                    subscription=subscription,
+                    volume=volume,
+                    publish_at=publish_at,
+                )
+            except Exception as exc:  # pragma: no cover - external interaction
+                self.show_popup(str(exc), color="#ff0000")
+                return
+
+            popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
+            popup.iconbitmap(self.icon_path)
+            popup.title("")
+            lines = [
+                f"{os.path.basename(path)}: {'успех' if ok else 'ошибка'}"
+                for path, ok in results.items()
+            ]
+            label = ctk.CTkLabel(
+                popup,
+                text="\n".join(lines) or "Нет результатов",
+                text_color="#eeeeee",
+                justify="left",
+                font=self.custom_font,
+            )
+            label.pack(padx=20, pady=20)
+            close_btn = ctk.CTkButton(
+                popup,
+                text="Закрыть",
+                command=popup.destroy,
+                corner_radius=12,
+                bg_color="#2f2f2f",
+                fg_color="#313131",
+                hover_color="#3e3e3e",
+                text_color="#eeeeee",
+                border_width=0,
+                font=self.custom_font,
+            )
+            close_btn.pack(pady=(0, 10))
+
+        def cancel():
+            dialog.destroy()
+
+        ok_button = ctk.CTkButton(
+            button_frame,
+            text="OK",
+            command=submit,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        ok_button.pack(side="left", padx=(0, 10))
+
+        cancel_button = ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            command=cancel,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        cancel_button.pack(side="left")
 
     def ask_questions(self):
         total_dialog = CustomInputDialog(
