@@ -37,3 +37,23 @@ def test_split_document(tmp_path):
         texts = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         assert all(not heading_pattern.match(t) for t in texts)
 
+
+def create_duplicate_doc(path):
+    doc = Document()
+    doc.add_paragraph("Глава 1")
+    doc.add_paragraph("Text for chapter 1")
+    doc.add_paragraph("Глава 1")
+    doc.add_paragraph("Another text")
+    doc.save(path)
+
+
+def test_split_document_duplicate_titles(tmp_path):
+    source = tmp_path / "dup_source.docx"
+    create_duplicate_doc(source)
+
+    with patch("cod.filedialog.askdirectory", return_value=str(tmp_path)):
+        created_files = split_document(str(source))
+
+    expected_names = {"Глава 1.docx", "Глава 1 (2).docx"}
+    assert {os.path.basename(p) for p in created_files} == expected_names
+
