@@ -319,7 +319,9 @@ class Application(tk.Tk):
         if not file_path:
             return
 
-        split_document(file_path)
+        created = split_document(file_path)
+        if created:
+            self.show_message(f"Создано {len(created)} файлов")
 
     def check_english_words(self):
         file_path = filedialog.askopenfilename(
