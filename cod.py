@@ -16,6 +16,7 @@ from tkinter import font as tkfont
 import copy
 import customtkinter as ctk
 from docx import Document
+from importlib import import_module, util
 from typing import Dict, List, Tuple
 
 from rulate_uploader import upload_chapters
@@ -311,6 +312,21 @@ class Application(tk.Tk):
         )
         self.split_button.pack(pady=10)
 
+        # Button to convert DOCX files to FB2
+        self.convert_button = ctk.CTkButton(
+            self.frame,
+            text="Законвертить",
+            command=self.convert_docx_to_fb2,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.convert_button.pack(pady=10)
+
         # Button to search for English words
         self.artifacts_button = ctk.CTkButton(
             self.frame,
@@ -359,6 +375,60 @@ class Application(tk.Tk):
         created = split_document(file_path)
         if created:
             self.show_message(f"Создано {len(created)} файлов")
+
+    def convert_docx_to_fb2(self):
+        if util.find_spec("fb2_converter") is None:
+            self.show_error(
+                "Модуль fb2_converter не найден. Убедитесь, что файлы проекта на месте."
+            )
+            return
+        if util.find_spec("lxml") is None:
+            self.show_error(
+                "Библиотека lxml не установлена. Установите зависимости из requirements.txt."
+            )
+            return
+
+        converter_module = import_module("fb2_converter")
+
+        files = filedialog.askopenfilenames(
+            title="Выберите документы для конвертации",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not files:
+            return
+
+        destination = filedialog.askdirectory(
+            title="Выберите папку для FB2 файлов",
+            initialdir=os.path.dirname(files[0]),
+        )
+        if not destination:
+            self.show_error("Папка для сохранения не выбрана.")
+            return
+
+        success_count = 0
+        failures: List[Tuple[str, str]] = []
+
+        convert_docx_to_fb2_file = converter_module.convert_docx_to_fb2
+
+        for docx_path in files:
+            try:
+                convert_docx_to_fb2_file(docx_path, destination)
+                success_count += 1
+            except Exception as exc:  # noqa: BLE001 - surface errors to the user
+                failures.append((docx_path, str(exc)))
+
+        if success_count:
+            self.show_popup(
+                f"Сконвертировано {success_count} файл(ов) в {destination}"
+            )
+
+        if failures:
+            failed_lines = "\n".join(
+                f"{os.path.basename(path)}: {error}" for path, error in failures
+            )
+            self.show_popup(
+                f"Не удалось сконвертировать:\n{failed_lines}", color="#ff0000"
+            )
 
     def check_english_words(self):
         file_path = filedialog.askopenfilename(
