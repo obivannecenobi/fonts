@@ -88,16 +88,64 @@ def split_document(file_path: str) -> List[str]:
 
 
 def check_english_words(file_path: str) -> Dict[str, List[Tuple[int, int]]]:
-    """Return mapping of English words to their paragraph and character positions."""
+    """Return mapping of English or mixed-language words to their positions."""
 
     document = Document(file_path)
     results: Dict[str, List[Tuple[int, int]]] = {}
+    english_pattern = re.compile(r"[A-Za-z]+")
+    mixed_pattern = re.compile(r"[A-Za-zА-Яа-яЁё]+")
+
     for p_idx, para in enumerate(document.paragraphs, start=1):
-        for match in re.finditer(r"[A-Za-z]+", para.text):
+        text = para.text
+
+        for match in english_pattern.finditer(text):
             word = match.group()
             char_pos = match.start() + 1  # 1-indexed character position
             results.setdefault(word, []).append((p_idx, char_pos))
+
+        for match in mixed_pattern.finditer(text):
+            word = match.group()
+            if re.search(r"[A-Za-z]", word) and re.search(r"[А-Яа-яЁё]", word):
+                char_pos = match.start() + 1
+                results.setdefault(word, []).append((p_idx, char_pos))
+
     return {word: positions for word, positions in sorted(results.items())}
+
+
+def find_duplicate_chapters(file_path: str) -> List[Tuple[List[str], str]]:
+    """Find duplicated chapter contents in a DOCX document."""
+
+    document = Document(file_path)
+    heading_pattern = re.compile(r"^Глава\s+\d+(?:\.\d+)?", re.IGNORECASE)
+    chapters: List[Tuple[str, str]] = []
+    current_title = None
+    current_content: List[str] = []
+
+    for para in document.paragraphs:
+        text = para.text.strip()
+        if heading_pattern.match(text):
+            if current_title is not None:
+                content_text = "\n".join(current_content).strip()
+                chapters.append((current_title, content_text))
+            current_title = text
+            current_content = []
+        elif current_title is not None:
+            current_content.append(text)
+
+    if current_title is not None:
+        content_text = "\n".join(current_content).strip()
+        chapters.append((current_title, content_text))
+
+    content_map: Dict[str, List[str]] = {}
+    for title, content in chapters:
+        content_map.setdefault(content, []).append(title)
+
+    duplicates: List[Tuple[List[str], str]] = []
+    for content, titles in content_map.items():
+        if len(titles) > 1:
+            duplicates.append((titles, content))
+
+    return duplicates
 
 # Path to store window geometry
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
@@ -342,6 +390,20 @@ class Application(tk.Tk):
         )
         self.artifacts_button.pack(pady=10)
 
+        self.duplicates_button = ctk.CTkButton(
+            self.frame,
+            text="Проверить на повторы",
+            command=self.check_duplicate_chapters,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.duplicates_button.pack(pady=10)
+
         # Button to upload chapters to Rulate
         self.upload_button = ctk.CTkButton(
             self.frame,
@@ -480,6 +542,60 @@ class Application(tk.Tk):
                 font=self.custom_font,
             )
             save_button.pack(side="left", padx=(0, 10))
+
+        close_button = ctk.CTkButton(
+            button_frame,
+            text="Закрыть",
+            command=popup.destroy,
+            corner_radius=12,
+            bg_color="#2f2f2f",
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        close_button.pack(side="left")
+
+    def check_duplicate_chapters(self):
+        file_path = filedialog.askopenfilename(
+            title="Выберите документ",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not file_path:
+            return
+
+        duplicates = find_duplicate_chapters(file_path)
+
+        if not duplicates:
+            self.show_popup("Повторов не найдено.")
+            return
+
+        popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
+        popup.iconbitmap(self.icon_path)
+        popup.title("")
+        popup.geometry("450x400")
+
+        tree = ttk.Treeview(
+            popup, columns=("chapters", "preview"), show="headings"
+        )
+        tree.heading("chapters", text="Главы")
+        tree.heading("preview", text="Начало текста")
+        tree.column("chapters", anchor="w", width=180)
+        tree.column("preview", anchor="w")
+
+        for titles, content in duplicates:
+            snippet = re.sub(r"\s+", " ", content).strip()
+            if len(snippet) > 120:
+                snippet = snippet[:117] + "…"
+            if not snippet:
+                snippet = "(пусто)"
+            tree.insert("", "end", values=(", ".join(titles), snippet))
+
+        tree.pack(expand=True, fill="both", padx=10, pady=10)
+
+        button_frame = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+        button_frame.pack(pady=(0, 10))
 
         close_button = ctk.CTkButton(
             button_frame,
