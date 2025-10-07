@@ -150,6 +150,102 @@ def find_duplicate_chapters(file_path: str) -> List[Tuple[List[str], str]]:
     return duplicates
 
 
+def _format_chapter_number(parts: Tuple[int, ...]) -> str:
+    """Return chapter label from tuple representation."""
+
+    if len(parts) == 1:
+        return f"Глава {parts[0]}"
+    return f"Глава {parts[0]}.{parts[1]}"
+
+
+def find_missing_chapters(file_path: str) -> List[str]:
+    """Return the list of missing chapter headings in a DOCX document."""
+
+    document = Document(file_path)
+    heading_pattern = re.compile(r"^Глава\s+(\d+(?:\.\d+)?)", re.IGNORECASE)
+    raw_numbers: List[str] = []
+
+    for paragraph in document.paragraphs:
+        text = paragraph.text.strip()
+        match = heading_pattern.match(text)
+        if match:
+            raw_numbers.append(match.group(1))
+
+    if not raw_numbers:
+        return []
+
+    contains_decimal = any("." in value for value in raw_numbers)
+
+    if not contains_decimal:
+        numbers = [int(value) for value in raw_numbers]
+        missing: List[str] = []
+        expected = numbers[0]
+
+        for current in numbers:
+            while expected < current:
+                missing.append(_format_chapter_number((expected,)))
+                expected += 1
+            expected = current + 1
+
+        return missing
+
+    chapters: List[Tuple[int, int]] = []
+    for value in raw_numbers:
+        parts = value.split(".")
+        if len(parts) != 2:
+            continue
+        chapters.append((int(parts[0]), int(parts[1])))
+
+    if not chapters:
+        return []
+
+    missing: List[str] = []
+    major_order: List[int] = []
+    majors: Dict[int, List[int]] = {}
+
+    for major, minor in chapters:
+        if major not in majors:
+            majors[major] = []
+            major_order.append(major)
+        majors[major].append(minor)
+
+    prev_major: int | None = None
+    prev_max_minor: int | None = None
+
+    for major in major_order:
+        if prev_major is not None and major - prev_major > 1:
+            limit = prev_max_minor if prev_max_minor is not None else 1
+            limit = max(limit, 1)
+            for gap_major in range(prev_major + 1, major):
+                for minor in range(1, limit + 1):
+                    missing.append(_format_chapter_number((gap_major, minor)))
+
+        ordered_minors = list(dict.fromkeys(majors[major]))
+        ordered_minors.sort()
+
+        expected_minor = 1
+        for minor in ordered_minors:
+            while expected_minor < minor:
+                missing.append(_format_chapter_number((major, expected_minor)))
+                expected_minor += 1
+            expected_minor = minor + 1
+
+        current_max_minor = ordered_minors[-1] if ordered_minors else 0
+        original_max_minor = current_max_minor
+
+        if prev_max_minor is not None and current_max_minor < prev_max_minor:
+            for value in range(current_max_minor + 1, prev_max_minor + 1):
+                missing.append(_format_chapter_number((major, value)))
+
+        prev_major = major
+        if original_max_minor:
+            prev_max_minor = original_max_minor
+        elif prev_max_minor is None:
+            prev_max_minor = 1
+
+    return missing
+
+
 def _paragraph_has_horizontal_border(paragraph: Paragraph) -> bool:
     """Return True if the paragraph is rendered as a horizontal separator line."""
 
@@ -458,6 +554,20 @@ class Application(tk.Tk):
         )
         self.duplicates_button.pack(pady=10)
 
+        self.numbering_button = ctk.CTkButton(
+            self.frame,
+            text="Проверить нумерацию",
+            command=self.check_chapter_numbering,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.numbering_button.pack(pady=10)
+
         # Button to upload chapters to Rulate
         self.upload_button = ctk.CTkButton(
             self.frame,
@@ -741,6 +851,23 @@ class Application(tk.Tk):
             font=self.custom_font,
         )
         close_button.pack(side="left")
+
+    def check_chapter_numbering(self):
+        file_path = filedialog.askopenfilename(
+            title="Выберите документ",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not file_path:
+            return
+
+        missing = find_missing_chapters(file_path)
+
+        if not missing:
+            self.show_popup("Все ровно!")
+            return
+
+        message = "Отсутствуют следующие главы:\n" + "\n".join(missing)
+        self.show_popup(message, color="#ff0000")
 
     def save_words_to_file(self, words):
         folder = filedialog.askdirectory(title="Выберите папку для сохранения списка")
