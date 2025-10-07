@@ -16,6 +16,8 @@ from tkinter import font as tkfont
 import copy
 import customtkinter as ctk
 from docx import Document
+from docx.oxml.ns import qn
+from docx.text.paragraph import Paragraph
 from importlib import import_module, util
 from typing import Dict, List, Tuple
 
@@ -146,6 +148,44 @@ def find_duplicate_chapters(file_path: str) -> List[Tuple[List[str], str]]:
             duplicates.append((titles, content))
 
     return duplicates
+
+
+def _paragraph_has_horizontal_border(paragraph: Paragraph) -> bool:
+    """Return True if the paragraph is rendered as a horizontal separator line."""
+
+    p_pr = paragraph._p.pPr
+    if p_pr is None:
+        return False
+    border = p_pr.find(qn("w:pBdr"))
+    if border is None:
+        return False
+    separator_tags = {
+        qn("w:top"),
+        qn("w:bottom"),
+        qn("w:between"),
+        qn("w:bar"),
+    }
+    return any(child.tag in separator_tags for child in border)
+
+
+def collect_formatted_separators(document: Document) -> List[Tuple[int, Paragraph]]:
+    """Return paragraphs representing auto-formatted separator lines."""
+
+    results: List[Tuple[int, Paragraph]] = []
+    for index, paragraph in enumerate(document.paragraphs, start=1):
+        if _paragraph_has_horizontal_border(paragraph):
+            results.append((index, paragraph))
+    return results
+
+
+def fix_formatted_separator(paragraph: Paragraph) -> None:
+    """Replace a formatted separator with plain text '***'."""
+
+    paragraph.text = "***"
+    p_pr = paragraph._p.get_or_add_pPr()
+    border = p_pr.find(qn("w:pBdr"))
+    if border is not None:
+        p_pr.remove(border)
 
 # Path to store window geometry
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
@@ -390,6 +430,20 @@ class Application(tk.Tk):
         )
         self.artifacts_button.pack(pady=10)
 
+        self.separator_button = ctk.CTkButton(
+            self.frame,
+            text="Найти разделители",
+            command=self.find_formatted_separators,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.separator_button.pack(pady=10)
+
         self.duplicates_button = ctk.CTkButton(
             self.frame,
             text="Проверить на повторы",
@@ -542,6 +596,83 @@ class Application(tk.Tk):
                 font=self.custom_font,
             )
             save_button.pack(side="left", padx=(0, 10))
+
+        close_button = ctk.CTkButton(
+            button_frame,
+            text="Закрыть",
+            command=popup.destroy,
+            corner_radius=12,
+            bg_color="#2f2f2f",
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        close_button.pack(side="left")
+
+    def find_formatted_separators(self):
+        file_path = filedialog.askopenfilename(
+            title="Выберите документ",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not file_path:
+            return
+
+        document = Document(file_path)
+        separators = collect_formatted_separators(document)
+
+        if not separators:
+            self.show_popup("Форматированные разделители не найдены.")
+            return
+
+        popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
+        popup.iconbitmap(self.icon_path)
+        popup.title("")
+        popup.geometry("360x320")
+
+        label = ctk.CTkLabel(
+            popup,
+            text=f"Найдено {len(separators)} форматированных разделителя(ей).",
+            text_color="#eeeeee",
+            font=self.custom_font,
+        )
+        label.pack(padx=10, pady=(10, 0))
+
+        tree = ttk.Treeview(popup, columns=("paragraph",), show="headings")
+        tree.heading("paragraph", text="№ параграфа")
+        tree.column("paragraph", anchor="center")
+
+        for index, _ in separators:
+            tree.insert("", "end", values=(index,))
+
+        tree.pack(expand=True, fill="both", padx=10, pady=10)
+
+        button_frame = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+        button_frame.pack(pady=(0, 10))
+
+        def fix():
+            for _, paragraph in separators:
+                fix_formatted_separator(paragraph)
+            document.save(file_path)
+            popup.destroy()
+            self.show_popup(
+                f"Устранено форматирование у {len(separators)} разделител(я/ей)."
+            )
+
+        fix_button = ctk.CTkButton(
+            button_frame,
+            text="Устранить форматирование",
+            command=fix,
+            corner_radius=12,
+            bg_color="#2f2f2f",
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        fix_button.pack(side="left", padx=(0, 10))
 
         close_button = ctk.CTkButton(
             button_frame,
