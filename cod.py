@@ -19,7 +19,7 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from importlib import import_module, util
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from rulate_uploader import upload_chapters
 
@@ -87,6 +87,94 @@ def split_document(file_path: str) -> List[str]:
         created_files.append(out_path)
 
     return created_files
+
+
+def split_chapters_into_two(file_path: str, output_dir: str) -> Tuple[List[str], List[str]]:
+    """Split each detected chapter into two separate documents."""
+
+    heading_pattern = re.compile(r"^Глава\s+(\d+)(?:\.(\d+))?", re.IGNORECASE)
+    document = Document(file_path)
+    created_files: List[str] = []
+    skipped_chapters: List[str] = []
+    current_label: Optional[str] = None
+    current_paragraphs: List[Paragraph] = []
+
+    def _unique_path(directory: str, filename: str) -> str:
+        base, ext = os.path.splitext(filename)
+        candidate = os.path.join(directory, filename)
+        counter = 2
+        while os.path.exists(candidate):
+            candidate = os.path.join(directory, f"{base} ({counter}){ext}")
+            counter += 1
+        return candidate
+
+    def _clear_document(doc: Document) -> None:
+        while doc.paragraphs:
+            element = doc.paragraphs[0]._element
+            element.getparent().remove(element)
+
+    def _save_split(label: str, paragraphs: List[Paragraph]) -> None:
+        if len(paragraphs) < 2:
+            skipped_chapters.append(label)
+            return
+
+        weights = [max(len(p.text.strip()), 1) for p in paragraphs]
+        total_weight = sum(weights)
+        target = total_weight / 2
+        cumulative = 0
+        split_index = len(paragraphs) // 2
+
+        for index, weight in enumerate(weights, start=1):
+            cumulative += weight
+            if cumulative >= target:
+                split_index = index
+                break
+
+        if split_index >= len(paragraphs):
+            split_index = len(paragraphs) - 1
+        if split_index <= 0:
+            split_index = 1
+
+        first_part = paragraphs[:split_index]
+        second_part = paragraphs[split_index:]
+
+        if not second_part:
+            skipped_chapters.append(label)
+            return
+
+        for part_index, part in enumerate((first_part, second_part), start=1):
+            new_doc = Document()
+            _clear_document(new_doc)
+            for paragraph in part:
+                new_doc._element.body.append(copy.deepcopy(paragraph._element))
+
+            chapter_name = f"Глава {label}.{part_index}"
+            sanitized = re.sub(r"[^\w\s.-]", "", chapter_name).strip()
+            if not sanitized:
+                sanitized = f"chapter_{part_index}"
+            filename = f"{sanitized}.docx"
+            output_path = _unique_path(output_dir, filename)
+            new_doc.save(output_path)
+            created_files.append(output_path)
+
+    for paragraph in document.paragraphs:
+        text = paragraph.text.strip()
+        match = heading_pattern.match(text)
+        if match:
+            if current_label is not None:
+                _save_split(current_label, current_paragraphs)
+            major = match.group(1)
+            minor = match.group(2)
+            label = major if minor is None else f"{major}.{minor}"
+            current_label = label
+            current_paragraphs = []
+        elif current_label is not None:
+            current_paragraphs.append(paragraph)
+
+    if current_label is not None:
+        _save_split(current_label, current_paragraphs)
+
+    return created_files, skipped_chapters
 
 
 def check_english_words(file_path: str) -> Dict[str, List[Tuple[int, int]]]:
@@ -496,6 +584,20 @@ class Application(tk.Tk):
         )
         self.split_button.pack(pady=10)
 
+        self.split_even_button = ctk.CTkButton(
+            self.frame,
+            text="Разделить!",
+            command=self.split_chapters_evenly,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.split_even_button.pack(pady=10)
+
         # Button to convert DOCX files to FB2
         self.convert_button = ctk.CTkButton(
             self.frame,
@@ -601,6 +703,40 @@ class Application(tk.Tk):
         created = split_document(file_path)
         if created:
             self.show_message(f"Создано {len(created)} файлов")
+
+    def split_chapters_evenly(self):
+        file_path = filedialog.askopenfilename(
+            title="Выберите документ",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not file_path:
+            return
+
+        output_dir = filedialog.askdirectory(
+            title="Выберите папку для сохранения",
+            initialdir=os.path.dirname(file_path),
+        )
+        if not output_dir:
+            self.show_error("Папка для сохранения не выбрана.")
+            return
+
+        created, skipped = split_chapters_into_two(file_path, output_dir)
+
+        if not created:
+            message = "Не удалось разделить главы."
+            if skipped:
+                message += "\n" + "\n".join(
+                    f"Глава {label}" for label in skipped
+                )
+            self.show_error(message)
+            return
+
+        message_lines = [f"Создано {len(created)} файлов"]
+        if skipped:
+            skipped_text = ", ".join(f"Глава {label}" for label in skipped)
+            message_lines.append(f"Не удалось разделить: {skipped_text}")
+
+        self.show_message("\n".join(message_lines))
 
     def convert_docx_to_fb2(self):
         if util.find_spec("fb2_converter") is None:
