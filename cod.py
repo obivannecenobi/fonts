@@ -16,7 +16,7 @@ from tkinter import font as tkfont
 import copy
 import customtkinter as ctk
 from docx import Document
-from docx.oxml.ns import qn
+from docx.oxml.ns import nsmap, qn
 from docx.text.paragraph import Paragraph
 from importlib import import_module, util
 from typing import Dict, List, Optional, Tuple
@@ -334,6 +334,38 @@ def find_missing_chapters(file_path: str) -> List[str]:
     return missing
 
 
+_W_NS = nsmap["w"]
+_WP_NS = nsmap.get("wp", "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing")
+_PIC_NS = nsmap.get("pic", "http://schemas.openxmlformats.org/drawingml/2006/picture")
+_VML_NS = "urn:schemas-microsoft-com:vml"
+_OFFICE_NS = "urn:schemas-microsoft-com:office:office"
+
+_W_PICT = f"{{{_W_NS}}}pict"
+_W_DRAWING = f"{{{_W_NS}}}drawing"
+_WP_DOCPR = f"{{{_WP_NS}}}docPr"
+_PIC_CNVPR = f"{{{_PIC_NS}}}cNvPr"
+_VML_SHAPE_TAGS = {
+    f"{{{_VML_NS}}}shape",
+    f"{{{_VML_NS}}}rect",
+    f"{{{_VML_NS}}}oval",
+    f"{{{_VML_NS}}}line",
+}
+_OFFICE_HR_ATTRIBUTES = {
+    f"{{{_OFFICE_NS}}}hr",
+    f"{{{_OFFICE_NS}}}hrstd",
+    f"{{{_OFFICE_NS}}}hralign",
+    f"{{{_OFFICE_NS}}}hrpct",
+}
+_OFFICE_HR_TAG = f"{{{_OFFICE_NS}}}hr"
+
+_HORIZONTAL_RULE_KEYWORDS = (
+    "horizontal line",
+    "horizontal rule",
+    "горизонтальная линия",
+    "разделитель",
+)
+
+
 def _paragraph_has_horizontal_border(paragraph: Paragraph) -> bool:
     """Return True if the paragraph is rendered as a horizontal separator line."""
 
@@ -352,20 +384,72 @@ def _paragraph_has_horizontal_border(paragraph: Paragraph) -> bool:
     return any(child.tag in separator_tags for child in border)
 
 
+def _element_defines_horizontal_rule(element) -> bool:
+    """Return True if the provided XML element corresponds to an HR shape."""
+
+    for child in element.iter():
+        if child.tag == _OFFICE_HR_TAG:
+            return True
+
+        if child.tag in _VML_SHAPE_TAGS:
+            for attr in _OFFICE_HR_ATTRIBUTES:
+                value = child.get(attr)
+                if value and value.lower() not in {"f", "false", "0"}:
+                    return True
+            style = child.get("style")
+            if style and "hr" in style.replace(" ", "").lower():
+                return True
+    return False
+
+
+def _paragraph_contains_horizontal_rule_shape(paragraph: Paragraph) -> bool:
+    """Return True if the paragraph contains a shape representing an HR line."""
+
+    if paragraph.text.strip():
+        return False
+
+    for pict in paragraph._p.iter(_W_PICT):
+        if _element_defines_horizontal_rule(pict):
+            return True
+
+    for drawing in paragraph._p.iter(_W_DRAWING):
+        for doc_pr in drawing.iter(_WP_DOCPR):
+            text = f"{doc_pr.get('title', '')} {doc_pr.get('descr', '')}".lower()
+            if any(keyword in text for keyword in _HORIZONTAL_RULE_KEYWORDS):
+                return True
+
+        for cnv_pr in drawing.iter(_PIC_CNVPR):
+            text = f"{cnv_pr.get('title', '')} {cnv_pr.get('descr', '')}".lower()
+            if any(keyword in text for keyword in _HORIZONTAL_RULE_KEYWORDS):
+                return True
+
+        if _element_defines_horizontal_rule(drawing):
+            return True
+
+    return False
+
+
 def collect_formatted_separators(document: Document) -> List[Tuple[int, Paragraph]]:
     """Return paragraphs representing auto-formatted separator lines."""
 
     results: List[Tuple[int, Paragraph]] = []
     for index, paragraph in enumerate(document.paragraphs, start=1):
-        if _paragraph_has_horizontal_border(paragraph):
+        if _paragraph_has_horizontal_border(paragraph) or _paragraph_contains_horizontal_rule_shape(
+            paragraph
+        ):
             results.append((index, paragraph))
     return results
 
 
 def fix_formatted_separator(paragraph: Paragraph) -> None:
-    """Replace a formatted separator with plain text '***'."""
+    """Replace a formatted separator with plain text '***\u200B'."""
 
-    paragraph.text = "***"
+    p_element = paragraph._p
+    for child in list(p_element):
+        if child.tag != qn("w:pPr"):
+            p_element.remove(child)
+
+    paragraph.text = "***\u200B"
     p_pr = paragraph._p.get_or_add_pPr()
     border = p_pr.find(qn("w:pBdr"))
     if border is not None:
