@@ -606,41 +606,22 @@ class Application(tk.Tk):
         header_font = ctk.CTkFont(
             family=custom_font.actual("family"), size=25, weight="bold"
         )
-        self.label = ttk.Label(self.frame, text="Генератор Глав", font=header_font, style="Custom.TLabel")
+        self.label = ttk.Label(self.frame, text="Нейро-Страж", font=header_font, style="Custom.TLabel")
         self.label.pack(pady=20)
 
-        # Кнопка для начала генерации
-        self.ask_button = ctk.CTkButton(
-            self.frame,
-            text="Начать генерацию",
-            command=self.ask_questions,
-            corner_radius=12,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
-            bg_color="#2f2f2f",
-            text_color="#eeeeee",
-            border_width=0,
-            font=self.custom_font,
+        self.group_title_font = ctk.CTkFont(
+            family=custom_font.actual("family"), size=max(font_size - 2, 12), weight="bold"
         )
-        self.ask_button.pack(pady=10)
 
-        # Поле для ввода пути с кнопкой
-        self.path_entry = ctk.CTkEntry(
-            self.frame,
-            placeholder_text="Куда сейвим?",
-            corner_radius=12,
-            fg_color="#ffffff",
-            text_color="#303030",
-            border_color="#2f2f2f",
-            border_width=0,
-            bg_color="#2f2f2f",
-            font=self.custom_font,
-        )
-        self.path_entry.pack(fill=tk.X, padx=10, pady=5)
+        self.groups_container = ctk.CTkFrame(self.frame, fg_color="#2f2f2f")
+        self.groups_container.pack(expand=True, fill="both")
 
-        # Кнопка для выбора папки
+        generator_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
+        generator_group.pack(fill="x", padx=10, pady=(0, 10))
+        self._add_group_header(generator_group, "Генерим епт")
+
         self.browse_button = ctk.CTkButton(
-            self.frame,
+            generator_group,
             text="Выбрать папку",
             command=self.browse_folder,
             corner_radius=12,
@@ -651,13 +632,25 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
         )
-        self.browse_button.pack(pady=10)
+        self.browse_button.pack(pady=(0, 8))
 
-        # Button to split document into chapters
-        self.split_button = ctk.CTkButton(
-            self.frame,
-            text="Разбить!",
-            command=self.split_document,
+        self.path_entry = ctk.CTkEntry(
+            generator_group,
+            placeholder_text="Куда сейвим?",
+            corner_radius=12,
+            fg_color="#ffffff",
+            text_color="#303030",
+            border_color="#2f2f2f",
+            border_width=0,
+            bg_color="#2f2f2f",
+            font=self.custom_font,
+        )
+        self.path_entry.pack(fill=tk.X, pady=(0, 8))
+
+        self.ask_button = ctk.CTkButton(
+            generator_group,
+            text="Сгенерировать",
+            command=self.ask_questions,
             corner_radius=12,
             fg_color="#313131",
             hover_color="#3e3e3e",
@@ -666,11 +659,73 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
         )
-        self.split_button.pack(pady=10)
+        self.ask_button.pack(pady=(0, 8))
+
+        self._add_separator(self.groups_container)
+
+        fix_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
+        fix_group.pack(fill="x", padx=10, pady=(0, 10))
+        self._add_group_header(fix_group, "Фиксим билят")
+
+        self.duplicates_button = ctk.CTkButton(
+            fix_group,
+            text="Повторение",
+            command=self.check_duplicate_chapters,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.duplicates_button.pack(pady=(0, 8))
+
+        self.separator_button = ctk.CTkButton(
+            fix_group,
+            text="Разделители",
+            command=self.find_formatted_separators,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.separator_button.pack(pady=(0, 8))
+
+        self.numbering_button = ctk.CTkButton(
+            fix_group,
+            text="Нумерация",
+            command=self.check_chapter_numbering,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.numbering_button.pack(pady=(0, 8))
+
+        self.artifacts_button = ctk.CTkButton(
+            fix_group,
+            text="Артефакты",
+            command=self.check_english_words,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.artifacts_button.pack(pady=(0, 8))
 
         self.split_even_button = ctk.CTkButton(
-            self.frame,
-            text="Разделить!",
+            fix_group,
+            text="Разделить",
             command=self.split_chapters_evenly,
             corner_radius=12,
             fg_color="#313131",
@@ -680,11 +735,30 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
         )
-        self.split_even_button.pack(pady=10)
+        self.split_even_button.pack(pady=(0, 8))
 
-        # Button to convert DOCX files to FB2
+        self.split_button = ctk.CTkButton(
+            fix_group,
+            text="Разбить",
+            command=self.split_document,
+            corner_radius=12,
+            fg_color="#313131",
+            hover_color="#3e3e3e",
+            bg_color="#2f2f2f",
+            text_color="#eeeeee",
+            border_width=0,
+            font=self.custom_font,
+        )
+        self.split_button.pack(pady=(0, 8))
+
+        self._add_separator(self.groups_container)
+
+        convert_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
+        convert_group.pack(fill="x", padx=10, pady=(0, 10))
+        self._add_group_header(convert_group, "Конвертим дон")
+
         self.convert_button = ctk.CTkButton(
-            self.frame,
+            convert_group,
             text="Законвертить",
             command=self.convert_docx_to_fb2,
             corner_radius=12,
@@ -695,68 +769,11 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
         )
-        self.convert_button.pack(pady=10)
+        self.convert_button.pack(pady=(0, 8))
 
-        # Button to search for English words
-        self.artifacts_button = ctk.CTkButton(
-            self.frame,
-            text="Проверка на артефакты",
-            command=self.check_english_words,
-            corner_radius=12,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
-            bg_color="#2f2f2f",
-            text_color="#eeeeee",
-            border_width=0,
-            font=self.custom_font,
-        )
-        self.artifacts_button.pack(pady=10)
-
-        self.separator_button = ctk.CTkButton(
-            self.frame,
-            text="Найти разделители",
-            command=self.find_formatted_separators,
-            corner_radius=12,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
-            bg_color="#2f2f2f",
-            text_color="#eeeeee",
-            border_width=0,
-            font=self.custom_font,
-        )
-        self.separator_button.pack(pady=10)
-
-        self.duplicates_button = ctk.CTkButton(
-            self.frame,
-            text="Проверить на повторы",
-            command=self.check_duplicate_chapters,
-            corner_radius=12,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
-            bg_color="#2f2f2f",
-            text_color="#eeeeee",
-            border_width=0,
-            font=self.custom_font,
-        )
-        self.duplicates_button.pack(pady=10)
-
-        self.numbering_button = ctk.CTkButton(
-            self.frame,
-            text="Проверить нумерацию",
-            command=self.check_chapter_numbering,
-            corner_radius=12,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
-            bg_color="#2f2f2f",
-            text_color="#eeeeee",
-            border_width=0,
-            font=self.custom_font,
-        )
-        self.numbering_button.pack(pady=10)
-
-        # Button to upload chapters to Rulate
+        # Button to upload chapters to Rulate (hidden by default)
         self.upload_button = ctk.CTkButton(
-            self.frame,
+            self.groups_container,
             text="Залить на Rulate",
             command=self.open_upload_dialog,
             corner_radius=12,
@@ -767,7 +784,29 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
         )
-        self.upload_button.pack(pady=10)
+
+    def _add_group_header(self, parent: tk.Widget, text: str) -> None:
+        ctk.CTkLabel(
+            parent,
+            text=text,
+            text_color="#eeeeee",
+            font=self.group_title_font,
+            anchor="w",
+            justify="left",
+        ).pack(anchor="w", pady=(0, 8))
+
+    def _add_separator(self, parent: tk.Widget) -> None:
+        container = tk.Frame(parent, bg="#2f2f2f")
+        container.pack(fill="x", pady=10)
+
+        line = tk.Frame(container, bg="#ffffff", height=1)
+        line.pack(pady=5)
+
+        def _resize_line(event: tk.Event) -> None:  # type: ignore[override]
+            width = int(event.width * (2 / 3))
+            line.configure(width=max(width, 1))
+
+        container.bind("<Configure>", _resize_line)
 
 
     def browse_folder(self):
