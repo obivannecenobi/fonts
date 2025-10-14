@@ -466,6 +466,8 @@ def fix_formatted_separator(paragraph: Paragraph) -> None:
 # Path to store window geometry
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
 
+GEOMETRY_RE = re.compile(r"(\d+)x(\d+)\+(-?\d+)\+(-?\d+)")
+
 class CustomInputDialog(ctk.CTkToplevel):
     """Simple dialog asking the user for a single line of text."""
 
@@ -1003,6 +1005,8 @@ class Application(tk.Tk):
         window.update_idletasks()
         width = max(window.winfo_width(), window.winfo_reqwidth(), 1)
         height = max(window.winfo_height(), window.winfo_reqheight(), 1)
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
 
         if relative_to is None and window is not self:
             parent: tk.Misc | None = self if self.winfo_exists() else None
@@ -1011,21 +1015,37 @@ class Application(tk.Tk):
 
         if parent is not None and parent.winfo_ismapped():
             parent.update_idletasks()
-            parent_x = parent.winfo_rootx()
-            parent_y = parent.winfo_rooty()
             parent_width = parent.winfo_width()
             parent_height = parent.winfo_height()
+            parent_x = parent.winfo_rootx()
+            parent_y = parent.winfo_rooty()
+
+            if parent_width <= 1 or parent_height <= 1:
+                geometry = parent.winfo_geometry()
+                match = GEOMETRY_RE.fullmatch(geometry)
+                if match:
+                    parent_width = int(match.group(1))
+                    parent_height = int(match.group(2))
+                    parent_x = int(match.group(3))
+                    parent_y = int(match.group(4))
+                else:
+                    parent_width = max(parent_width, parent.winfo_reqwidth(), 1)
+                    parent_height = max(parent_height, parent.winfo_reqheight(), 1)
+                    parent_x = parent.winfo_rootx()
+                    parent_y = parent.winfo_rooty()
 
             x = parent_x + (parent_width - width) // 2
             y = parent_y + (parent_height - height) // 2
         else:
-            screen_width = window.winfo_screenwidth()
-            screen_height = window.winfo_screenheight()
-
             x = (screen_width - width) // 2
             y = (screen_height - height) // 2
 
-        window.geometry(f"{width}x{height}+{max(x, 0)}+{max(y, 0)}")
+        max_x = max(screen_width - width, 0)
+        max_y = max(screen_height - height, 0)
+        x = min(max(x, 0), max_x)
+        y = min(max(y, 0), max_y)
+
+        window.geometry(f"{width}x{height}+{x}+{y}")
 
     def _create_dialog_parent(self) -> tk.Toplevel:
         dialog_parent = tk.Toplevel(self)
