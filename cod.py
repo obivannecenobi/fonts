@@ -486,8 +486,14 @@ class CustomInputDialog(ctk.CTkToplevel):
         )
         self._entry.pack(padx=20, pady=(0, 20))
 
+        entry_height = getattr(master, "entry_height", None)
+        if entry_height:
+            self._entry.configure(height=entry_height)
+
         button_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
         button_frame.pack(padx=20, pady=(0, 20))
+
+        button_text_color = getattr(master, "button_text_color", "#eeeeee")
 
         self._ok_button = ctk.CTkButton(
             button_frame,
@@ -495,7 +501,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             command=self._ok,
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=button_text_color,
             corner_radius=12,
             border_width=0,
             font=font,
@@ -508,12 +514,22 @@ class CustomInputDialog(ctk.CTkToplevel):
             command=self._cancel,
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=button_text_color,
             corner_radius=12,
             border_width=0,
             font=font,
         )
         self._cancel_button.pack(side="left")
+
+        button_height = getattr(master, "button_height", None)
+        if button_height:
+            self._ok_button.configure(height=button_height)
+            self._cancel_button.configure(height=button_height)
+
+        hover_helper = getattr(master, "_apply_button_hover_effect", None)
+        if callable(hover_helper):
+            hover_helper(self._ok_button)
+            hover_helper(self._cancel_button)
 
         self._entry.bind("<Return>", lambda event: self._ok())
         self.protocol("WM_DELETE_WINDOW", self._cancel)
@@ -573,12 +589,17 @@ class Application(tk.Tk):
             except tk.TclError:
                 font_family = tkfont.nametofont("TkDefaultFont").actual("family")
         default_font = tkfont.nametofont("TkDefaultFont")
-        base_size = default_font.cget("size") + 4
-        font_size = int(self.config_data.get("font_size", base_size))
+        base_size = default_font.cget("size") + 6
+        font_size = max(int(self.config_data.get("font_size", base_size)), base_size)
         custom_font = ctk.CTkFont(family=font_family, size=font_size)
         self.custom_font = custom_font
         self.config_data["font_size"] = str(font_size)
         self.option_add("*Font", custom_font)
+
+        self.button_height = max(int(font_size * 2.1), 40)
+        self.entry_height = self.button_height
+        self.button_text_color = "#f2f2f2"
+        self.neon_text_color = "#ffffff"
 
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
@@ -587,13 +608,19 @@ class Application(tk.Tk):
         self.style.configure("Custom.TLabel", background="#2f2f2f", foreground="#eeeeee")
 
         # Создаем окно перед настройкой шрифта
-        self.title("")
+        self.title("НЕЙРО-СТРАЖ")
         # Set window geometry
+        min_width, min_height = 560, 640
         saved_geom = self.config_data.get("geometry", "")
         if saved_geom:
-            self.geometry(saved_geom)
+            width, height, position = self._parse_geometry(saved_geom)
+            width = max(width, min_width)
+            height = max(height, min_height)
+            geometry_value = f"{width}x{height}{position}"
         else:
-            self.geometry("500x400")  # Размер окна
+            geometry_value = f"{min_width}x{min_height}"
+        self.geometry(geometry_value)
+        self.minsize(min_width, min_height)
         self.configure(bg="#2f2f2f")  # Темно-серый фон
         self.resizable(True, True)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -604,21 +631,23 @@ class Application(tk.Tk):
 
         # Создаем метку
         header_font = ctk.CTkFont(
-            family=custom_font.actual("family"), size=25, weight="bold"
+            family=custom_font.actual("family"),
+            size=max(font_size + 10, 28),
+            weight="bold",
         )
-        self.label = ttk.Label(self.frame, text="Нейро-Страж", font=header_font, style="Custom.TLabel")
+        self.label = ttk.Label(
+            self.frame,
+            text="НЕЙРО-СТРАЖ",
+            font=header_font,
+            style="Custom.TLabel",
+        )
         self.label.pack(pady=20)
-
-        self.group_title_font = ctk.CTkFont(
-            family=custom_font.actual("family"), size=max(font_size - 2, 12), weight="bold"
-        )
 
         self.groups_container = ctk.CTkFrame(self.frame, fg_color="#2f2f2f")
         self.groups_container.pack(expand=True, fill="both")
 
         generator_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
         generator_group.pack(fill="x", padx=10, pady=(0, 10))
-        self._add_group_header(generator_group, "Генерим епт")
 
         self.browse_button = ctk.CTkButton(
             generator_group,
@@ -628,11 +657,13 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.browse_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.browse_button)
 
         self.path_entry = ctk.CTkEntry(
             generator_group,
@@ -644,6 +675,7 @@ class Application(tk.Tk):
             border_width=0,
             bg_color="#2f2f2f",
             font=self.custom_font,
+            height=self.entry_height,
         )
         self.path_entry.pack(fill=tk.X, pady=(0, 8))
 
@@ -655,17 +687,18 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.ask_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.ask_button)
 
         self._add_separator(self.groups_container)
 
         fix_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
         fix_group.pack(fill="x", padx=10, pady=(0, 10))
-        self._add_group_header(fix_group, "Фиксим билят")
 
         self.duplicates_button = ctk.CTkButton(
             fix_group,
@@ -675,11 +708,13 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.duplicates_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.duplicates_button)
 
         self.separator_button = ctk.CTkButton(
             fix_group,
@@ -689,11 +724,13 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.separator_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.separator_button)
 
         self.numbering_button = ctk.CTkButton(
             fix_group,
@@ -703,11 +740,13 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.numbering_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.numbering_button)
 
         self.artifacts_button = ctk.CTkButton(
             fix_group,
@@ -717,11 +756,13 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.artifacts_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.artifacts_button)
 
         self.split_even_button = ctk.CTkButton(
             fix_group,
@@ -731,11 +772,13 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.split_even_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.split_even_button)
 
         self.split_button = ctk.CTkButton(
             fix_group,
@@ -745,17 +788,18 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.split_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.split_button)
 
         self._add_separator(self.groups_container)
 
         convert_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
         convert_group.pack(fill="x", padx=10, pady=(0, 10))
-        self._add_group_header(convert_group, "Конвертим дон")
 
         self.convert_button = ctk.CTkButton(
             convert_group,
@@ -765,11 +809,13 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         self.convert_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.convert_button)
 
         # Button to upload chapters to Rulate (hidden by default)
         self.upload_button = ctk.CTkButton(
@@ -780,20 +826,29 @@ class Application(tk.Tk):
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
+        self._apply_button_hover_effect(self.upload_button)
 
-    def _add_group_header(self, parent: tk.Widget, text: str) -> None:
-        ctk.CTkLabel(
-            parent,
-            text=text,
-            text_color="#eeeeee",
-            font=self.group_title_font,
-            anchor="w",
-            justify="left",
-        ).pack(anchor="w", pady=(0, 8))
+    def _apply_button_hover_effect(self, button: ctk.CTkButton) -> None:
+        default_color = button.cget("text_color")
+        if isinstance(default_color, tuple):
+            default_color = default_color[0]
+        if not default_color:
+            default_color = self.button_text_color
+            button.configure(text_color=default_color)
+
+        def _on_enter(_: tk.Event) -> None:  # type: ignore[override]
+            button.configure(text_color=self.neon_text_color)
+
+        def _on_leave(_: tk.Event) -> None:  # type: ignore[override]
+            button.configure(text_color=default_color)
+
+        button.bind("<Enter>", _on_enter)
+        button.bind("<Leave>", _on_leave)
 
     def _add_separator(self, parent: tk.Widget) -> None:
         container = tk.Frame(parent, bg="#2f2f2f")
@@ -807,6 +862,24 @@ class Application(tk.Tk):
             line.configure(width=max(width, 1))
 
         container.bind("<Configure>", _resize_line)
+
+    def _parse_geometry(self, geometry: str) -> tuple[int, int, str]:
+        size_part = geometry
+        position_part = ""
+        for index, char in enumerate(geometry):
+            if char in "+-":
+                size_part = geometry[:index]
+                position_part = geometry[index:]
+                break
+
+        try:
+            width_str, height_str = size_part.split("x", 1)
+            width = int(width_str)
+            height = int(height_str)
+        except ValueError:
+            width, height = 0, 0
+
+        return width, height, position_part
 
 
     def browse_folder(self):
@@ -960,11 +1033,13 @@ class Application(tk.Tk):
                 bg_color="#2f2f2f",
                 fg_color="#313131",
                 hover_color="#3e3e3e",
-                text_color="#eeeeee",
+                text_color=self.button_text_color,
                 border_width=0,
                 font=self.custom_font,
+                height=self.button_height,
             )
             save_button.pack(side="left", padx=(0, 10))
+            self._apply_button_hover_effect(save_button)
 
         close_button = ctk.CTkButton(
             button_frame,
@@ -974,11 +1049,13 @@ class Application(tk.Tk):
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         close_button.pack(side="left")
+        self._apply_button_hover_effect(close_button)
 
     def find_formatted_separators(self):
         file_path = filedialog.askopenfilename(
@@ -1037,11 +1114,13 @@ class Application(tk.Tk):
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         fix_button.pack(side="left", padx=(0, 10))
+        self._apply_button_hover_effect(fix_button)
 
         close_button = ctk.CTkButton(
             button_frame,
@@ -1051,11 +1130,13 @@ class Application(tk.Tk):
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         close_button.pack(side="left")
+        self._apply_button_hover_effect(close_button)
 
     def check_duplicate_chapters(self):
         file_path = filedialog.askopenfilename(
@@ -1105,11 +1186,13 @@ class Application(tk.Tk):
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         close_button.pack(side="left")
+        self._apply_button_hover_effect(close_button)
 
     def check_chapter_numbering(self):
         file_path = filedialog.askopenfilename(
@@ -1174,6 +1257,7 @@ class Application(tk.Tk):
                 corner_radius=12,
                 border_width=0,
                 font=self.custom_font,
+                height=self.entry_height,
             )
             entry.pack(fill=tk.X, padx=10, pady=(0, 10))
 
@@ -1270,11 +1354,13 @@ class Application(tk.Tk):
                 bg_color="#2f2f2f",
                 fg_color="#313131",
                 hover_color="#3e3e3e",
-                text_color="#eeeeee",
+                text_color=self.button_text_color,
                 border_width=0,
                 font=self.custom_font,
+                height=self.button_height,
             )
             close_btn.pack(pady=(0, 10))
+            self._apply_button_hover_effect(close_btn)
 
         def cancel():
             dialog.destroy()
@@ -1286,11 +1372,13 @@ class Application(tk.Tk):
             corner_radius=12,
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         ok_button.pack(side="left", padx=(0, 10))
+        self._apply_button_hover_effect(ok_button)
 
         cancel_button = ctk.CTkButton(
             button_frame,
@@ -1299,11 +1387,13 @@ class Application(tk.Tk):
             corner_radius=12,
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            height=self.button_height,
         )
         cancel_button.pack(side="left")
+        self._apply_button_hover_effect(cancel_button)
 
     def ask_questions(self):
         total_dialog = CustomInputDialog(
@@ -1396,11 +1486,13 @@ class Application(tk.Tk):
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
-            text_color="#eeeeee",
+            text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
         )
         close_button.pack(pady=5)
+        close_button.configure(height=self.button_height)
+        self._apply_button_hover_effect(close_button)
 
     def load_config(self):
         config = {}
