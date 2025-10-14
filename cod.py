@@ -608,12 +608,12 @@ class Application(tk.Tk):
         self.entry_height = self.button_height
         self.entry_border_width = 0
         self.button_text_color = "#f4f4f4"
-        self.button_hover_text_color = "#ffffff"
+        self.button_hover_text_color = "#2f2f2f"
         self.button_fg_color = "#313131"
-        self.button_hover_color = "#252626"
+        self.button_hover_color = "#ffffff"
         self.button_border_color = "#ffffff"
         self.button_border_width = 0
-        self.button_hover_border_width = 2
+        self.button_hover_border_width = 0
         self.button_corner_radius = 20
         self.entry_corner_radius = 20
         self.style = ttk.Style(self)
