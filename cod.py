@@ -608,10 +608,10 @@ class Application(tk.Tk):
         self.entry_height = self.button_height
         self.entry_border_width = 0
         self.button_text_color = "#f2f2f2"
-        self.neon_text_color = "#dfffff"
+        self.neon_text_color = "#ffffff"
         self.button_fg_color = "#313131"
-        self.button_hover_color = "#141414"
-        self.button_border_color = "#52ffff"
+        self.button_hover_color = "#1b1b1b"
+        self.button_border_color = "#ffffff"
         self.button_border_width = 0
         self.button_hover_border_width = 2
         self.button_corner_radius = 20
@@ -869,9 +869,7 @@ class Application(tk.Tk):
         text = "НЕЙРО-СТРАЖ"
 
         glow_layers: list[tuple[str, int]] = [
-            ("#00f6ff", 6),
-            ("#48ffff", 4),
-            ("#9efcff", 2),
+            ("#ffffff", 2),
         ]
 
         def _draw(_: tk.Event | None = None) -> None:
@@ -886,7 +884,7 @@ class Application(tk.Tk):
                 font_tuple,
                 (x, y),
                 glow_layers,
-                "#f5feff",
+                "#ffffff",
             )
 
         self.header_canvas.bind("<Configure>", _draw)
@@ -928,7 +926,15 @@ class Application(tk.Tk):
             )
             button._neon_overlay.bind("<Leave>", _hide_hover)
 
-        def _hide_hover(_: tk.Event | None = None) -> None:
+        def _hide_hover(event: tk.Event | None = None) -> None:
+            if (
+                event is not None
+                and button._neon_overlay is not None
+                and button.winfo_containing(event.x_root, event.y_root)
+                in {button, button._neon_overlay}
+            ):
+                return
+
             if button._neon_overlay is not None:
                 button._neon_overlay.destroy()
                 button._neon_overlay = None
@@ -1019,9 +1025,7 @@ class Application(tk.Tk):
             self.custom_font.actual("weight"),
         )
         glow_layers: list[tuple[str, int]] = [
-            ("#00f6ff", 3),
-            ("#66ffff", 2),
-            ("#bfffff", 1),
+            ("#ffffff", 2),
         ]
 
         def _draw(_: tk.Event | None = None) -> None:
