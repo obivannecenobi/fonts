@@ -476,13 +476,18 @@ class CustomInputDialog(ctk.CTkToplevel):
         )
         self._label.pack(padx=20, pady=(20, 10))
 
+        border_width = getattr(master, "button_border_width", 1)
+        entry_border_width = getattr(master, "entry_border_width", 0)
+        fg_color = getattr(master, "button_fg_color", "#313131")
+        hover_color = getattr(master, "button_hover_color", "#1a1a1a")
+
         self._entry = ctk.CTkEntry(
             self,
             fg_color="#ffffff",
             border_color="#2f2f2f",
             text_color="#303030",
             corner_radius=getattr(master, "entry_corner_radius", 12),
-            border_width=0,
+            border_width=entry_border_width,
             font=font,
         )
         self._entry.pack(padx=20, pady=(0, 20))
@@ -500,11 +505,11 @@ class CustomInputDialog(ctk.CTkToplevel):
             button_frame,
             text="OK",
             command=self._ok,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=fg_color,
+            hover_color=hover_color,
             text_color=button_text_color,
             corner_radius=getattr(master, "button_corner_radius", 12),
-            border_width=0,
+            border_width=border_width,
             font=font,
         )
         self._ok_button.pack(side="left", padx=(0, 10))
@@ -513,11 +518,11 @@ class CustomInputDialog(ctk.CTkToplevel):
             button_frame,
             text="Cancel",
             command=self._cancel,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=fg_color,
+            hover_color=hover_color,
             text_color=button_text_color,
             corner_radius=getattr(master, "button_corner_radius", 12),
-            border_width=0,
+            border_width=border_width,
             font=font,
         )
         self._cancel_button.pack(side="left")
@@ -599,13 +604,15 @@ class Application(tk.Tk):
         self.option_add("*Font", custom_font)
 
         self.button_height = max(int(font_size * 2.1), 40)
+        self.button_width = max(int(self.button_height * 5), 220)
         self.entry_height = self.button_height
+        self.entry_border_width = 0
         self.button_text_color = "#f2f2f2"
         self.neon_text_color = "#ffffff"
         self.button_fg_color = "#313131"
-        self.button_hover_color = "#181818"
+        self.button_hover_color = "#1a1a1a"
         self.button_border_color = "#ffffff"
-        self.button_border_width = 2
+        self.button_border_width = 1
         self.button_corner_radius = 20
         self.entry_corner_radius = 20
 
@@ -646,13 +653,7 @@ class Application(tk.Tk):
         header_frame = ctk.CTkFrame(self.frame, fg_color="#2f2f2f")
         header_frame.pack(fill="x", pady=(0, 10))
 
-        self.label = ttk.Label(
-            header_frame,
-            text="НЕЙРО-СТРАЖ",
-            font=header_font,
-            style="Custom.TLabel",
-        )
-        self.label.pack(pady=20)
+        self._create_neon_header(header_frame, header_font)
 
         self.groups_container = ctk.CTkFrame(self.frame, fg_color="#2f2f2f")
         self.groups_container.pack(expand=True, fill="both")
@@ -665,13 +666,14 @@ class Application(tk.Tk):
             text="Выбрать папку",
             command=self.browse_folder,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self.browse_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.browse_button)
@@ -701,13 +703,14 @@ class Application(tk.Tk):
             text="Повторение",
             command=self.check_duplicate_chapters,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self.duplicates_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.duplicates_button)
@@ -717,13 +720,14 @@ class Application(tk.Tk):
             text="Разделители",
             command=self.find_formatted_separators,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self.separator_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.separator_button)
@@ -733,13 +737,14 @@ class Application(tk.Tk):
             text="Нумерация",
             command=self.check_chapter_numbering,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self.numbering_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.numbering_button)
@@ -749,13 +754,14 @@ class Application(tk.Tk):
             text="Артефакты",
             command=self.check_english_words,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self.artifacts_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.artifacts_button)
@@ -765,13 +771,14 @@ class Application(tk.Tk):
             text="Разделить",
             command=self.split_chapters_evenly,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self.split_even_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.split_even_button)
@@ -781,13 +788,14 @@ class Application(tk.Tk):
             text="Разбить",
             command=self.split_document,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self.split_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.split_button)
@@ -802,13 +810,14 @@ class Application(tk.Tk):
             text="Законвертить",
             command=self.convert_docx_to_fb2,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self.convert_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.convert_button)
@@ -819,13 +828,14 @@ class Application(tk.Tk):
             text="Залить на Rulate",
             command=self.open_upload_dialog,
             corner_radius=self.button_corner_radius,
-            fg_color="#313131",
-            hover_color="#3e3e3e",
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             font=self.custom_font,
             height=self.button_height,
+            width=self.button_width,
         )
         self._apply_button_hover_effect(self.upload_button)
 
@@ -839,13 +849,68 @@ class Application(tk.Tk):
         if target_height > height:
             self.geometry(f"{width}x{target_height}{position}")
 
+    def _create_neon_header(self, parent: tk.Widget, font: ctk.CTkFont) -> None:
+        canvas_height = int(font.actual("size") * 2)
+        self.header_canvas = tk.Canvas(
+            parent,
+            bg="#2f2f2f",
+            highlightthickness=0,
+            height=canvas_height,
+        )
+        self.header_canvas.pack(fill="x", pady=20)
+
+        font_tuple: tuple[str, int, str] = (
+            font.actual("family"),
+            int(font.actual("size")),
+            font.actual("weight"),
+        )
+        text = "НЕЙРО-СТРАЖ"
+
+        glow_layers: list[tuple[str, int]] = [
+            ("#4dffff", 8),
+            ("#7effff", 6),
+            ("#b3ffff", 4),
+            ("#e5ffff", 2),
+        ]
+
+        def _draw(_: tk.Event | None = None) -> None:
+            self.header_canvas.delete("all")
+            width = self.header_canvas.winfo_width()
+            x = width // 2
+            y = canvas_height // 2
+
+            for color, spread in glow_layers:
+                for dx in range(-spread, spread + 1):
+                    for dy in range(-spread, spread + 1):
+                        distance = abs(dx) + abs(dy)
+                        if distance > spread:
+                            continue
+                        self.header_canvas.create_text(
+                            x + dx,
+                            y + dy,
+                            text=text,
+                            fill=color,
+                            font=font_tuple,
+                        )
+
+            self.header_canvas.create_text(
+                x,
+                y,
+                text=text,
+                fill="#ffffff",
+                font=font_tuple,
+            )
+
+        self.header_canvas.bind("<Configure>", _draw)
+        self.header_canvas.after(0, _draw)
+
     def _apply_button_hover_effect(self, button: ctk.CTkButton) -> None:
         button.configure(
             fg_color=self.button_fg_color,
             hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=0,
+            border_width=self.button_border_width,
             border_color=self.button_border_color,
         )
 
@@ -854,13 +919,11 @@ class Application(tk.Tk):
         def _on_enter(_: tk.Event) -> None:  # type: ignore[override]
             button.configure(
                 text_color=self.neon_text_color,
-                border_width=self.button_border_width,
             )
 
         def _on_leave(_: tk.Event) -> None:  # type: ignore[override]
             button.configure(
                 text_color=default_color,
-                border_width=0,
             )
 
         button.bind("<Enter>", _on_enter)
@@ -883,18 +946,18 @@ class Application(tk.Tk):
         if hasattr(self, "ask_button"):
             self.ask_button.destroy()
 
-        width = max(int(self.button_height * 5), 220)
         self.ask_button = ctk.CTkButton(
             self.generator_group,
             text="Сгенерировать",
             command=self.ask_questions,
-            width=width,
+            width=self.button_width,
             height=self.button_height,
             corner_radius=self.button_corner_radius,
             fg_color=self.button_fg_color,
             hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
+            border_width=self.button_border_width,
             font=self.custom_font,
         )
         self.ask_button.pack(pady=(0, 8))
