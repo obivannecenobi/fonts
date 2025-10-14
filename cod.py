@@ -565,7 +565,7 @@ class Application(tk.Tk):
         super().__init__()
         self.icon_path = os.path.join(
             os.path.dirname(__file__),
-            "ChatGPT Image 15 авг. 2025 г., 20_42_09.ico",
+            "app_icon.ico",
         )
         self.iconbitmap(self.icon_path)
 
