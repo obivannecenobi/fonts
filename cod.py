@@ -516,10 +516,16 @@ class CustomInputDialog(ctk.CTkToplevel):
 
         button_text_color = getattr(master, "button_text_color", "#eeeeee")
 
+        base_button_height = getattr(master, "button_height", 40)
+        base_button_width = getattr(master, "button_width", 220)
         compact_button_width = max(
-            getattr(master, "button_width", 0) // 2,
-            int(getattr(master, "button_height", 40) * 3),
-            140,
+            min(base_button_width, 320),
+            int(base_button_height * 3.5),
+            200,
+        )
+        button_corner_radius = max(
+            getattr(master, "button_corner_radius", 12),
+            base_button_height // 2 + 6,
         )
 
         self._ok_button = ctk.CTkButton(
@@ -529,7 +535,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color=fg_color,
             hover_color=hover_color,
             text_color=button_text_color,
-            corner_radius=getattr(master, "button_corner_radius", 12),
+            corner_radius=button_corner_radius,
             border_width=border_width,
             font=font,
             width=compact_button_width,
@@ -543,7 +549,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color=fg_color,
             hover_color=hover_color,
             text_color=button_text_color,
-            corner_radius=getattr(master, "button_corner_radius", 12),
+            corner_radius=button_corner_radius,
             border_width=border_width,
             font=font,
             width=compact_button_width,
@@ -1008,7 +1014,7 @@ class Application(tk.Tk):
 
         window.geometry(f"{width}x{height}+{max(x, 0)}+{max(y, 0)}")
 
-    def _ask_directory(self, **kwargs) -> str:
+    def _create_dialog_parent(self) -> tk.Toplevel:
         dialog_parent = tk.Toplevel(self)
         dialog_parent.withdraw()
         dialog_parent.overrideredirect(True)
@@ -1020,6 +1026,19 @@ class Application(tk.Tk):
         dialog_parent.deiconify()
         dialog_parent.lift()
         dialog_parent.update_idletasks()
+        return dialog_parent
+
+    def _show_file_dialog(
+        self, dialog_callable: Callable[..., Any], **kwargs
+    ) -> Any:
+        dialog_parent = self._create_dialog_parent()
+        try:
+            return dialog_callable(parent=dialog_parent, **kwargs)
+        finally:
+            dialog_parent.destroy()
+
+    def _ask_directory(self, **kwargs) -> str:
+        dialog_parent = self._create_dialog_parent()
         try:
             selection = filedialog.askdirectory(parent=dialog_parent, **kwargs)
         finally:
@@ -1086,7 +1105,8 @@ class Application(tk.Tk):
             self.path_entry.insert(0, folder_selected)
 
     def split_document(self):
-        file_path = filedialog.askopenfilename(
+        file_path = self._show_file_dialog(
+            filedialog.askopenfilename,
             title="Выберите документ",
             filetypes=[("Word Documents", "*.docx")],
         )
@@ -1098,7 +1118,8 @@ class Application(tk.Tk):
             self.show_message(f"Создано {len(created)} файлов")
 
     def split_chapters_evenly(self):
-        file_path = filedialog.askopenfilename(
+        file_path = self._show_file_dialog(
+            filedialog.askopenfilename,
             title="Выберите документ",
             filetypes=[("Word Documents", "*.docx")],
         )
@@ -1145,7 +1166,8 @@ class Application(tk.Tk):
 
         converter_module = import_module("fb2_converter")
 
-        files = filedialog.askopenfilenames(
+        files = self._show_file_dialog(
+            filedialog.askopenfilenames,
             title="Выберите документы для конвертации",
             filetypes=[("Word Documents", "*.docx")],
         )
@@ -1186,7 +1208,8 @@ class Application(tk.Tk):
             )
 
     def check_english_words(self):
-        file_path = filedialog.askopenfilename(
+        file_path = self._show_file_dialog(
+            filedialog.askopenfilename,
             title="Выберите документ",
             filetypes=[("Word Documents", "*.docx")],
         )
@@ -1258,7 +1281,8 @@ class Application(tk.Tk):
         self._center_window(popup)
 
     def find_formatted_separators(self):
-        file_path = filedialog.askopenfilename(
+        file_path = self._show_file_dialog(
+            filedialog.askopenfilename,
             title="Выберите документ",
             filetypes=[("Word Documents", "*.docx")],
         )
@@ -1342,7 +1366,8 @@ class Application(tk.Tk):
         self._center_window(popup)
 
     def check_duplicate_chapters(self):
-        file_path = filedialog.askopenfilename(
+        file_path = self._show_file_dialog(
+            filedialog.askopenfilename,
             title="Выберите документ",
             filetypes=[("Word Documents", "*.docx")],
         )
@@ -1401,7 +1426,8 @@ class Application(tk.Tk):
         self._center_window(popup)
 
     def check_chapter_numbering(self):
-        file_path = filedialog.askopenfilename(
+        file_path = self._show_file_dialog(
+            filedialog.askopenfilename,
             title="Выберите документ",
             filetypes=[("Word Documents", "*.docx")],
         )
@@ -1431,7 +1457,8 @@ class Application(tk.Tk):
         self.show_popup(f"Список сохранен в {file_path}")
 
     def open_upload_dialog(self):
-        files = filedialog.askopenfilenames(
+        files = self._show_file_dialog(
+            filedialog.askopenfilenames,
             title="Выберите главы",
             filetypes=[("Word Documents", "*.docx")],
         )
@@ -1745,7 +1772,7 @@ class Application(tk.Tk):
             width=compact_button_width,
             height=self.button_height,
         )
-        close_button.pack(pady=(4, 12))
+        close_button.pack(pady=(8, 16))
         self._apply_button_hover_effect(close_button)
 
         max_width = min(self.winfo_screenwidth() - 160, 720)
@@ -1763,7 +1790,12 @@ class Application(tk.Tk):
             popup.update_idletasks()
 
         height = popup.winfo_reqheight()
-        height = max(height, self.button_height + 140)
+        content_height = 0
+        try:
+            content_height = content_widget.winfo_reqheight()
+        except tk.TclError:
+            content_height = 0
+        height = max(height, content_height + self.button_height + 64)
         height = min(height, max_height)
 
         popup.geometry(f"{width}x{height}")
