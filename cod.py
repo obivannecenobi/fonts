@@ -11,6 +11,7 @@ import sys
 import time
 import re
 import tkinter as tk
+from pathlib import Path
 from tkinter import filedialog, ttk
 from tkinter import font as tkfont
 
@@ -579,10 +580,17 @@ class CustomInputDialog(ctk.CTkToplevel):
         return self.result
 
     def _apply_window_icon(self) -> None:
+        if not self.icon_path:
+            return
+
         try:
-            self.iconbitmap(self.icon_path)
+            self.iconbitmap(default=self.icon_path)
         except tk.TclError:
-            pass
+            try:
+                self.iconbitmap(self.icon_path)
+            except tk.TclError:
+                pass
+
         if self._icon_photo is not None:
             try:
                 self.iconphoto(False, self._icon_photo)
@@ -593,18 +601,10 @@ class CustomInputDialog(ctk.CTkToplevel):
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.icon_path = os.path.join(
-            os.path.dirname(__file__),
-            "app_icon.ico",
-        )
-        self.iconbitmap(self.icon_path)
-        self.icon_photo: tk.PhotoImage | None = None
-        try:
-            with Image.open(self.icon_path) as icon_image:
-                self.icon_photo = ImageTk.PhotoImage(icon_image)
-            self.iconphoto(False, self.icon_photo)
-        except Exception:
-            self.icon_photo = None
+
+        self.icon_path = self._select_icon_file()
+        self.icon_photo: tk.PhotoImage | None = self._load_icon_photo(self.icon_path)
+        self._apply_window_icon(self)
 
         self.config_data = self.load_config()
 
@@ -899,6 +899,38 @@ class Application(tk.Tk):
 
         self.header_label = main_label
 
+    def _select_icon_file(self) -> str:
+        base_dir = Path(__file__).resolve().parent
+        icons_dir = base_dir / "icons"
+        candidates: list[Path] = []
+
+        if icons_dir.is_dir():
+            for pattern in ("*.ico", "*.png", "*.gif"):
+                for candidate in sorted(icons_dir.glob(pattern)):
+                    candidates.append(candidate)
+
+        fallback = base_dir / "app_icon.ico"
+        if fallback not in candidates:
+            candidates.append(fallback)
+
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+
+        return str(fallback)
+
+    def _load_icon_photo(self, path: str) -> tk.PhotoImage | None:
+        try:
+            return tk.PhotoImage(file=path)
+        except tk.TclError:
+            pass
+
+        try:
+            with Image.open(path) as icon_image:
+                return ImageTk.PhotoImage(icon_image.copy())
+        except Exception:
+            return None
+
     def _apply_button_hover_effect(self, button: ctk.CTkButton) -> None:
         button.configure(
             fg_color=self.button_fg_color,
@@ -926,11 +958,18 @@ class Application(tk.Tk):
         button.bind("<Enter>", _show_hover)
         button.bind("<Leave>", _hide_hover)
 
-    def _apply_window_icon(self, window: tk.Toplevel) -> None:
+    def _apply_window_icon(self, window: tk.Misc) -> None:
+        if not self.icon_path:
+            return
+
         try:
-            window.iconbitmap(self.icon_path)
+            window.iconbitmap(default=self.icon_path)
         except tk.TclError:
-            pass
+            try:
+                window.iconbitmap(self.icon_path)
+            except tk.TclError:
+                pass
+
         if self.icon_photo is not None:
             try:
                 window.iconphoto(False, self.icon_photo)
@@ -1673,12 +1712,13 @@ class Application(tk.Tk):
                 text=message,
                 text_color=color,
                 font=message_font,
-                justify="left",
-                anchor="w",
+                justify="center",
+                anchor="center",
             )
-            label.pack(fill="both", expand=True, pady=(0, 16))
+            label.pack(fill="both", expand=True, padx=12, pady=(0, 16))
             content_widget = label
 
+        popup_button_width = min(self.button_width, 220)
         close_button = ctk.CTkButton(
             frame,
             text="Закрыть",
@@ -1690,32 +1730,37 @@ class Application(tk.Tk):
             text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
-            width=self.button_width,
+            width=popup_button_width,
             height=self.button_height,
         )
         close_button.pack(pady=(0, 4))
         self._apply_button_hover_effect(close_button)
 
-        max_width = min(self.winfo_screenwidth() - 160, 720)
-        min_width = max(self.button_width + 80, 320)
-        max_height = min(self.winfo_screenheight() - 160, 600)
-
-        if isinstance(content_widget, ctk.CTkLabel):
-            content_widget.configure(wraplength=max_width - 80)
-
         popup.update_idletasks()
-        width = min(max(popup.winfo_reqwidth(), min_width), max_width)
+
+        frame_width = frame.winfo_reqwidth()
+        frame_height = frame.winfo_reqheight()
+        button_req_width = close_button.winfo_reqwidth()
+        button_req_height = close_button.winfo_reqheight()
+
+        min_width = 240
+        min_height = button_req_height + 120
+        max_width = max(min(self.winfo_screenwidth() - 160, 720), min_width)
+        max_height = max(min(self.winfo_screenheight() - 160, 600), min_height)
+
+        natural_width = max(frame_width, button_req_width + 48)
+        width = min(max(natural_width, min_width), max_width)
 
         if isinstance(content_widget, ctk.CTkLabel):
-            content_widget.configure(wraplength=width - 80)
+            content_widget.configure(wraplength=max(width - 48, 120))
             popup.update_idletasks()
+            frame_height = frame.winfo_reqheight()
 
-        height = popup.winfo_reqheight()
-        height = max(height, self.button_height + 140)
-        height = min(height, max_height)
+        natural_height = frame_height
+        height = min(max(natural_height, min_height), max_height)
 
         popup.geometry(f"{width}x{height}")
-        popup.minsize(min(width, min_width), min(height, max_height))
+        popup.minsize(min_width, min_height)
         self._center_window(popup)
 
     def load_config(self):
