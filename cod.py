@@ -491,7 +491,7 @@ class CustomInputDialog(ctk.CTkToplevel):
         self._label = ctk.CTkLabel(
             self, text=question, text_color="#eeeeee", font=font
         )
-        self._label.pack(padx=16, pady=(12, 8))
+        self._label.pack(padx=16, pady=(16, 8))
 
         border_width = getattr(master, "button_border_width", 1)
         entry_border_width = getattr(master, "entry_border_width", 0)
@@ -507,14 +507,14 @@ class CustomInputDialog(ctk.CTkToplevel):
             border_width=entry_border_width,
             font=font,
         )
-        self._entry.pack(padx=16, pady=(0, 12))
+        self._entry.pack(padx=16, pady=(0, 10))
 
         entry_height = getattr(master, "entry_height", None)
         if entry_height:
             self._entry.configure(height=entry_height)
 
         button_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        button_frame.pack(padx=16, pady=(0, 4))
+        button_frame.pack(fill="x", padx=16, pady=(0, 10))
 
         button_text_color = getattr(master, "button_text_color", "#eeeeee")
 
@@ -525,7 +525,11 @@ class CustomInputDialog(ctk.CTkToplevel):
             int(base_button_height * 2.2),
             110,
         )
-        button_corner_radius = getattr(master, "button_corner_radius", 12)
+        entry_corner_radius = getattr(master, "entry_corner_radius", 12)
+        button_corner_radius = max(
+            entry_corner_radius,
+            getattr(master, "button_corner_radius", entry_corner_radius),
+        )
 
         self._ok_button = ctk.CTkButton(
             button_frame,
@@ -598,13 +602,19 @@ class CustomInputDialog(ctk.CTkToplevel):
         if not self.icon_path:
             return
 
+        icon_file = Path(self.icon_path).resolve()
         try:
-            self.iconbitmap(default=self.icon_path)
+            self.iconbitmap(default=str(icon_file))
         except tk.TclError:
             try:
-                self.iconbitmap(self.icon_path)
+                self.iconbitmap(str(icon_file))
             except tk.TclError:
                 pass
+
+        try:
+            self.wm_iconbitmap(str(icon_file))
+        except tk.TclError:
+            pass
 
         if self._icon_photo is not None:
             try:
@@ -978,11 +988,12 @@ class Application(tk.Tk):
         if not self.icon_path:
             return
 
+        icon_file = Path(self.icon_path).resolve()
         try:
-            window.iconbitmap(default=self.icon_path)
+            window.iconbitmap(default=str(icon_file))
         except tk.TclError:
             try:
-                window.iconbitmap(self.icon_path)
+                window.iconbitmap(str(icon_file))
             except tk.TclError:
                 pass
 
@@ -991,6 +1002,11 @@ class Application(tk.Tk):
                 window.iconphoto(False, self.icon_photo)
             except tk.TclError:
                 pass
+
+        try:
+            window.wm_iconbitmap(str(icon_file))
+        except tk.TclError:
+            pass
 
     def _center_window(
         self,
@@ -1010,28 +1026,35 @@ class Application(tk.Tk):
         else:
             parent = relative_to
 
-        constrain_to_screen = True
+        constrain_to_screen = parent is None
 
-        if parent is not None and parent.winfo_ismapped():
-            parent.update_idletasks()
-            parent_width = parent.winfo_width()
-            parent_height = parent.winfo_height()
-            parent_x = parent.winfo_rootx()
-            parent_y = parent.winfo_rooty()
+        if parent is not None:
+            try:
+                parent.update_idletasks()
+            except tk.TclError:
+                parent = None
 
-            if parent_width <= 1 or parent_height <= 1:
-                geometry = parent.winfo_geometry()
-                match = GEOMETRY_RE.fullmatch(geometry)
-                if match:
-                    parent_width = int(match.group(1))
-                    parent_height = int(match.group(2))
-                    parent_x = int(match.group(3))
-                    parent_y = int(match.group(4))
-                else:
-                    parent_width = max(parent_width, parent.winfo_reqwidth(), 1)
-                    parent_height = max(parent_height, parent.winfo_reqheight(), 1)
+        if parent is not None:
+            parent_width = max(parent.winfo_width(), parent.winfo_reqwidth(), 1)
+            parent_height = max(parent.winfo_height(), parent.winfo_reqheight(), 1)
+            parent_geometry = parent.winfo_geometry()
+            parent_x: int | None = None
+            parent_y: int | None = None
+
+            match = GEOMETRY_RE.fullmatch(parent_geometry)
+            if match:
+                parent_width = max(parent_width, int(match.group(1)))
+                parent_height = max(parent_height, int(match.group(2)))
+                parent_x = int(match.group(3))
+                parent_y = int(match.group(4))
+
+            if parent_x is None or parent_y is None:
+                try:
                     parent_x = parent.winfo_rootx()
                     parent_y = parent.winfo_rooty()
+                except tk.TclError:
+                    parent_x = (screen_width - parent_width) // 2
+                    parent_y = (screen_height - parent_height) // 2
 
             x = parent_x + (parent_width - width) // 2
             y = parent_y + (parent_height - height) // 2
@@ -1262,8 +1285,23 @@ class Application(tk.Tk):
         popup.geometry("400x400")
         popup.transient(self)
 
+        content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+        content.pack(fill="both", expand=True, padx=16, pady=16)
+        content.grid_rowconfigure(1, weight=1)
+        content.grid_columnconfigure(0, weight=1)
+
+        header = ctk.CTkLabel(
+            content,
+            text=f"Найдено {len(words_with_pos)} артефакт(ов).",
+            text_color="#eeeeee",
+            font=self.custom_font,
+            anchor="w",
+            justify="left",
+        )
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+
         tree = ttk.Treeview(
-            popup, columns=("word", "paragraph"), show="headings"
+            content, columns=("word", "paragraph"), show="headings"
         )
         tree.heading("word", text="Слово")
         tree.heading("paragraph", text="№ параграфа")
@@ -1274,10 +1312,14 @@ class Application(tk.Tk):
             paragraphs = ", ".join(str(p) for p, _ in positions)
             tree.insert("", "end", values=(word, paragraphs))
 
-        tree.pack(expand=True, fill="both", padx=10, pady=10)
+        tree.grid(row=1, column=0, sticky="nsew", pady=(0, 12))
 
-        button_frame = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        button_frame.pack(pady=(0, 10))
+        tree_scrollbar = ttk.Scrollbar(content, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=tree_scrollbar.set)
+        tree_scrollbar.grid(row=1, column=1, sticky="ns", pady=(0, 12), padx=(8, 0))
+
+        button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 0))
 
         if len(words_with_pos) > 50:
             save_button = ctk.CTkButton(
@@ -1336,25 +1378,35 @@ class Application(tk.Tk):
         popup.geometry("360x320")
         popup.transient(self)
 
+        content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+        content.pack(fill="both", expand=True, padx=16, pady=16)
+        content.grid_rowconfigure(1, weight=1)
+        content.grid_columnconfigure(0, weight=1)
+
         label = ctk.CTkLabel(
-            popup,
+            content,
             text=f"Найдено {len(separators)} форматированных разделителя(ей).",
             text_color="#eeeeee",
             font=self.custom_font,
+            anchor="w",
+            justify="left",
         )
-        label.pack(padx=10, pady=(10, 0))
+        label.grid(row=0, column=0, sticky="ew", pady=(0, 12))
 
-        tree = ttk.Treeview(popup, columns=("paragraph",), show="headings")
+        tree = ttk.Treeview(content, columns=("paragraph",), show="headings")
         tree.heading("paragraph", text="№ параграфа")
         tree.column("paragraph", anchor="center")
 
         for index, _ in separators:
             tree.insert("", "end", values=(index,))
 
-        tree.pack(expand=True, fill="both", padx=10, pady=10)
+        tree.grid(row=1, column=0, sticky="nsew", pady=(0, 12))
+        tree_scrollbar = ttk.Scrollbar(content, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=tree_scrollbar.set)
+        tree_scrollbar.grid(row=1, column=1, sticky="ns", padx=(8, 0), pady=(0, 12))
 
-        button_frame = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        button_frame.pack(pady=(0, 10))
+        button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 0))
 
         def fix():
             for _, paragraph in separators:
@@ -1420,26 +1472,44 @@ class Application(tk.Tk):
         popup.geometry("450x400")
         popup.transient(self)
 
+        content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+        content.pack(fill="both", expand=True, padx=16, pady=16)
+        content.grid_rowconfigure(1, weight=1)
+        content.grid_columnconfigure(0, weight=1)
+
+        header = ctk.CTkLabel(
+            content,
+            text=f"Найдено {len(duplicates)} повтор(ов).",
+            text_color="#eeeeee",
+            font=self.custom_font,
+            anchor="w",
+            justify="left",
+        )
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+
         tree = ttk.Treeview(
-            popup, columns=("chapters", "preview"), show="headings"
+            content, columns=("chapters", "preview"), show="headings"
         )
         tree.heading("chapters", text="Главы")
         tree.heading("preview", text="Начало текста")
         tree.column("chapters", anchor="w", width=180)
         tree.column("preview", anchor="w")
 
-        for titles, content in duplicates:
-            snippet = re.sub(r"\s+", " ", content).strip()
+        for titles, content_text in duplicates:
+            snippet = re.sub(r"\s+", " ", content_text).strip()
             if len(snippet) > 120:
                 snippet = snippet[:117] + "…"
             if not snippet:
                 snippet = "(пусто)"
             tree.insert("", "end", values=(", ".join(titles), snippet))
 
-        tree.pack(expand=True, fill="both", padx=10, pady=10)
+        tree.grid(row=1, column=0, sticky="nsew", pady=(0, 12))
+        tree_scrollbar = ttk.Scrollbar(content, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=tree_scrollbar.set)
+        tree_scrollbar.grid(row=1, column=1, sticky="ns", padx=(8, 0), pady=(0, 12))
 
-        button_frame = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        button_frame.pack(pady=(0, 10))
+        button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 0))
 
         close_button = ctk.CTkButton(
             button_frame,
@@ -1821,7 +1891,7 @@ class Application(tk.Tk):
             width=compact_button_width,
             height=self.button_height,
         )
-        close_button.grid(row=1, column=0, pady=(0, 8), sticky="n")
+        close_button.grid(row=1, column=0, pady=(0, 4), sticky="n")
         self._apply_button_hover_effect(close_button)
 
         max_width = min(self.winfo_screenwidth() - 160, 720)
@@ -1844,7 +1914,7 @@ class Application(tk.Tk):
             content_height = content_widget.winfo_reqheight()
         except tk.TclError:
             content_height = 0
-        height = max(height, content_height + self.button_height + 64)
+        height = max(height, content_height + self.button_height + 40)
         height = min(height, max_height)
 
         popup.geometry(f"{width}x{height}")
