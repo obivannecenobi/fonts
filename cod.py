@@ -894,6 +894,30 @@ class Application(tk.Tk):
         button.bind("<Enter>", _show_hover)
         button.bind("<Leave>", _hide_hover)
 
+    def _center_window(self, window: tk.Toplevel) -> None:
+        """Center a transient window over the main application window."""
+
+        window.update_idletasks()
+        width = window.winfo_width()
+        height = window.winfo_height()
+
+        if self.winfo_viewable():
+            parent_x = self.winfo_rootx()
+            parent_y = self.winfo_rooty()
+            parent_width = self.winfo_width()
+            parent_height = self.winfo_height()
+
+            x = parent_x + (parent_width - width) // 2
+            y = parent_y + (parent_height - height) // 2
+        else:
+            screen_width = window.winfo_screenwidth()
+            screen_height = window.winfo_screenheight()
+
+            x = (screen_width - width) // 2
+            y = (screen_height - height) // 2
+
+        window.geometry(f"{width}x{height}+{max(x, 0)}+{max(y, 0)}")
+
     def _add_separator(self, parent: tk.Widget) -> None:
         container = tk.Frame(parent, bg="#2f2f2f")
         container.pack(fill="x")
@@ -1527,6 +1551,9 @@ class Application(tk.Tk):
         popup.iconbitmap(self.icon_path)
         popup.title("")
         popup.geometry("300x100")
+        popup.transient(self)
+        popup.grab_set()
+        self._center_window(popup)
 
         frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
         frame.pack(fill="both", expand=True)
