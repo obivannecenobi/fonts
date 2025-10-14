@@ -519,13 +519,13 @@ class CustomInputDialog(ctk.CTkToplevel):
         base_button_height = getattr(master, "button_height", 40)
         base_button_width = getattr(master, "button_width", 220)
         compact_button_width = max(
-            min(base_button_width, 320),
-            int(base_button_height * 3.5),
-            200,
+            min(base_button_width, 300),
+            int(base_button_height * 2.6),
+            160,
         )
         button_corner_radius = max(
             getattr(master, "button_corner_radius", 12),
-            base_button_height // 2 + 6,
+            base_button_height // 2 + 12,
         )
 
         self._ok_button = ctk.CTkButton(
@@ -678,9 +678,10 @@ class Application(tk.Tk):
             width = max(width, min_width)
             height = max(height, min_height)
             geometry_value = f"{width}x{height}{position}"
+            self.geometry(geometry_value)
         else:
-            geometry_value = f"{min_width}x{min_height}"
-        self.geometry(geometry_value)
+            self.geometry(f"{min_width}x{min_height}")
+            self._center_window(self, relative_to=None)
         self.minsize(min_width, min_height)
         self.configure(bg="#2f2f2f")  # Темно-серый фон
         self.resizable(True, True)
@@ -990,18 +991,28 @@ class Application(tk.Tk):
             except tk.TclError:
                 pass
 
-    def _center_window(self, window: tk.Toplevel) -> None:
-        """Center a transient window over the main application window."""
+    def _center_window(
+        self,
+        window: tk.Misc,
+        relative_to: tk.Misc | None = None,
+    ) -> None:
+        """Center *window* either on ``relative_to`` or on the main screen."""
 
         window.update_idletasks()
-        width = window.winfo_width()
-        height = window.winfo_height()
+        width = max(window.winfo_width(), 1)
+        height = max(window.winfo_height(), 1)
 
-        if self.winfo_viewable():
-            parent_x = self.winfo_rootx()
-            parent_y = self.winfo_rooty()
-            parent_width = self.winfo_width()
-            parent_height = self.winfo_height()
+        if relative_to is None and window is not self:
+            parent: tk.Misc | None = self if self.winfo_exists() else None
+        else:
+            parent = relative_to
+
+        if parent is not None and parent.winfo_ismapped():
+            parent.update_idletasks()
+            parent_x = parent.winfo_rootx()
+            parent_y = parent.winfo_rooty()
+            parent_width = parent.winfo_width()
+            parent_height = parent.winfo_height()
 
             x = parent_x + (parent_width - width) // 2
             y = parent_y + (parent_height - height) // 2
@@ -1713,6 +1724,8 @@ class Application(tk.Tk):
 
         frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
         frame.pack(fill="both", expand=True, padx=16, pady=16)
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
 
         message_font = ctk.CTkFont(
             family=self.custom_font.actual("family"),
@@ -1725,7 +1738,7 @@ class Application(tk.Tk):
 
         if use_scrollable:
             content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
-            content_container.pack(fill="both", expand=True, pady=(12, 12))
+            content_container.grid(row=0, column=0, sticky="nsew", pady=(12, 12))
 
             textbox = ctk.CTkTextbox(
                 content_container,
@@ -1746,23 +1759,36 @@ class Application(tk.Tk):
             textbox.configure(yscrollcommand=scrollbar.set)
             content_widget = textbox
         else:
+            content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
+            content_container.grid(row=0, column=0, sticky="nsew", pady=(12, 12))
+            content_container.grid_rowconfigure(0, weight=1)
+            content_container.grid_columnconfigure(0, weight=1)
+
             label = ctk.CTkLabel(
-                frame,
+                content_container,
                 text=message,
                 text_color=color,
                 font=message_font,
                 justify="center",
                 anchor="center",
             )
-            label.pack(fill="x", padx=12, pady=(12, 12))
+            label.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
             content_widget = label
 
-        compact_button_width = max(self.button_width // 2, int(self.button_height * 3), 140)
+        compact_button_width = max(
+            min(self.button_width, 280),
+            int(self.button_height * 2.5),
+            160,
+        )
+        compact_corner_radius = max(
+            self.button_corner_radius,
+            (self.button_height // 2) + 12,
+        )
         close_button = ctk.CTkButton(
             frame,
             text="Закрыть",
             command=popup.destroy,
-            corner_radius=self.button_corner_radius,
+            corner_radius=compact_corner_radius,
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
@@ -1772,7 +1798,7 @@ class Application(tk.Tk):
             width=compact_button_width,
             height=self.button_height,
         )
-        close_button.pack(pady=(8, 16))
+        close_button.grid(row=1, column=0, pady=(0, 8), sticky="n")
         self._apply_button_hover_effect(close_button)
 
         max_width = min(self.winfo_screenwidth() - 160, 720)
