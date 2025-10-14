@@ -22,7 +22,6 @@ from docx.text.paragraph import Paragraph
 from importlib import import_module, util
 from typing import Any, Dict, List, Optional, Tuple
 
-from glow_button import GlowButton
 from rulate_uploader import upload_chapters
 
 
@@ -561,359 +560,6 @@ class CustomInputDialog(ctk.CTkToplevel):
         return self.result
 
 
-class GlowSettingsDialog(ctk.CTkToplevel):
-    """Dialog allowing the user to fine-tune glow button parameters."""
-
-    def __init__(
-        self,
-        master: "Application",
-        settings: Dict[str, Any],
-        defaults: Dict[str, Any],
-        font: ctk.CTkFont,
-        icon_path: str,
-    ) -> None:
-        super().__init__(master)
-        self._master = master
-        self._defaults = defaults
-        self._font = font
-        self._entries: Dict[str, ctk.CTkEntry] = {}
-        self._base_button_kwargs = {
-            "fg_color": getattr(master, "button_fg_color", "#313131"),
-            "hover_color": getattr(master, "button_hover_color", "#181818"),
-            "text_color": getattr(master, "button_text_color", "#f2f2f2"),
-            "bg_color": "#2f2f2f",
-        }
-
-        self.title("Настройки свечения")
-        self.iconbitmap(icon_path)
-        self.configure(fg_color="#2f2f2f")
-        self.resizable(False, False)
-
-        self.result: Optional[Dict[str, Any]] = None
-        self._preview_button: Optional[GlowButton] = None
-
-        self.border_var = tk.StringVar(value=self._format_number(settings["border_thickness"]))
-        self.gradient_start_var = tk.StringVar(value=settings["gradient_colors"][0])
-        self.gradient_end_var = tk.StringVar(value=settings["gradient_colors"][1])
-        self.glow_color_var = tk.StringVar(value=settings["glow_color"])
-        self.idle_glow_var = tk.StringVar(value=self._format_number(settings["idle_glow_multiplier"]))
-        self.hover_glow_var = tk.StringVar(value=self._format_number(settings["hover_glow_multiplier"]))
-        self.animation_speed_var = tk.StringVar(value=str(settings["animation_speed"]))
-        self.corner_radius_var = tk.StringVar(value=str(settings["corner_radius"]))
-
-        self.geometry("420x620")
-
-        content = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        content.pack(fill="both", expand=True, padx=20, pady=(20, 10))
-        content.grid_columnconfigure(1, weight=1)
-
-        self._add_labeled_entry(content, "Толщина рамки", self.border_var, 0)
-        self._add_labeled_entry(content, "Градиент: начало", self.gradient_start_var, 1)
-        self._add_labeled_entry(content, "Градиент: конец", self.gradient_end_var, 2)
-        self._add_labeled_entry(content, "Цвет свечения", self.glow_color_var, 3)
-        self._add_labeled_entry(content, "Свечение без наведения", self.idle_glow_var, 4)
-        self._add_labeled_entry(content, "Свечение при наведении", self.hover_glow_var, 5)
-        self._add_labeled_entry(content, "Скорость анимации", self.animation_speed_var, 6)
-        self._add_labeled_entry(content, "Скругление", self.corner_radius_var, 7)
-
-        layers_label = ctk.CTkLabel(
-            content,
-            text="Слои свечения",
-            text_color="#eeeeee",
-            font=self._font,
-        )
-        layers_label.grid(row=8, column=0, columnspan=2, sticky="w", pady=(12, 4))
-
-        self.layers_text = ctk.CTkTextbox(
-            content,
-            height=100,
-            fg_color="#1f1f1f",
-            text_color="#f2f2f2",
-            corner_radius=8,
-            font=self._font,
-        )
-        self.layers_text.grid(row=9, column=0, columnspan=2, sticky="nsew")
-        self.layers_text.insert(
-            "1.0",
-            "\n".join(
-                f"{radius}, {self._format_number(strength)}" for radius, strength in settings["glow_layers"]
-            ),
-        )
-        self.layers_text.bind("<KeyRelease>", self._update_preview)
-        self.layers_text.bind("<FocusOut>", self._update_preview)
-
-        hint = ctk.CTkLabel(
-            content,
-            text="Каждая строка: радиус, сила (0-1).",
-            text_color="#aaaaaa",
-            font=ctk.CTkFont(
-                family=self._font.actual("family"),
-                size=max(self._font.cget("size") - 2, 10),
-            ),
-        )
-        hint.grid(row=10, column=0, columnspan=2, sticky="w", pady=(4, 0))
-
-        preview_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        preview_frame.pack(fill="x", padx=20, pady=(0, 10))
-
-        preview_label = ctk.CTkLabel(
-            preview_frame,
-            text="Предпросмотр",
-            text_color="#eeeeee",
-            font=self._font,
-        )
-        preview_label.pack(anchor="w")
-
-        self.preview_container = ctk.CTkFrame(preview_frame, fg_color="#2f2f2f")
-        self.preview_container.pack(pady=(10, 0), fill="x")
-
-        buttons_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        buttons_frame.pack(padx=20, pady=(10, 20))
-
-        self.save_button = ctk.CTkButton(
-            buttons_frame,
-            text="Сохранить",
-            command=self._on_save,
-            corner_radius=getattr(master, "button_corner_radius", 12),
-            font=self._font,
-            **self._base_button_kwargs,
-        )
-        self.save_button.pack(side="left", padx=(0, 10))
-
-        self.reset_button = ctk.CTkButton(
-            buttons_frame,
-            text="Сбросить",
-            command=self._reset_defaults,
-            corner_radius=getattr(master, "button_corner_radius", 12),
-            font=self._font,
-            **self._base_button_kwargs,
-        )
-        self.reset_button.pack(side="left", padx=(0, 10))
-
-        self.cancel_button = ctk.CTkButton(
-            buttons_frame,
-            text="Отмена",
-            command=self._on_cancel,
-            corner_radius=getattr(master, "button_corner_radius", 12),
-            font=self._font,
-            **self._base_button_kwargs,
-        )
-        self.cancel_button.pack(side="left")
-
-        for entry in self._entries.values():
-            entry.bind("<KeyRelease>", self._update_preview)
-            entry.bind("<FocusOut>", self._update_preview)
-
-        hover_helper = getattr(master, "_apply_button_hover_effect", None)
-        if callable(hover_helper):
-            hover_helper(self.save_button)
-            hover_helper(self.reset_button)
-            hover_helper(self.cancel_button)
-
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.after(50, self._update_preview)
-        self.grab_set()
-        self.focus_set()
-
-    def _format_number(self, value: Any) -> str:
-        try:
-            number = float(value)
-        except (TypeError, ValueError):
-            return str(value)
-        return format(number, "g")
-
-    def _add_labeled_entry(
-        self,
-        parent: ctk.CTkFrame,
-        label_text: str,
-        variable: tk.StringVar,
-        row: int,
-    ) -> None:
-        label = ctk.CTkLabel(parent, text=label_text, text_color="#eeeeee", font=self._font)
-        label.grid(row=row, column=0, sticky="w", pady=(0, 6))
-        entry = ctk.CTkEntry(
-            parent,
-            textvariable=variable,
-            fg_color="#ffffff",
-            border_color="#2f2f2f",
-            text_color="#303030",
-            corner_radius=getattr(self._master, "entry_corner_radius", 12),
-            border_width=0,
-            font=self._font,
-        )
-        entry.grid(row=row, column=1, sticky="ew", padx=(12, 0), pady=(0, 6))
-        self._entries[label_text] = entry
-
-    def _collect_settings(self, silent: bool = False) -> Optional[Dict[str, Any]]:
-        errors: List[str] = []
-
-        try:
-            border_thickness = max(0.0, float(self.border_var.get()))
-        except (TypeError, ValueError):
-            if silent:
-                return None
-            errors.append("Толщина рамки должна быть числом.")
-            border_thickness = self._defaults["border_thickness"]
-
-        try:
-            animation_speed = max(1, int(float(self.animation_speed_var.get())))
-        except (TypeError, ValueError):
-            if silent:
-                return None
-            errors.append("Скорость анимации должна быть целым числом.")
-            animation_speed = self._defaults["animation_speed"]
-
-        try:
-            corner_radius = max(0, int(float(self.corner_radius_var.get())))
-        except (TypeError, ValueError):
-            if silent:
-                return None
-            errors.append("Скругление должно быть числом.")
-            corner_radius = self._defaults["corner_radius"]
-
-        try:
-            idle_multiplier = max(0.0, float(self.idle_glow_var.get()))
-        except (TypeError, ValueError):
-            if silent:
-                return None
-            errors.append("Свечение без наведения должно быть числом.")
-            idle_multiplier = self._defaults["idle_glow_multiplier"]
-
-        try:
-            hover_multiplier = max(0.0, float(self.hover_glow_var.get()))
-        except (TypeError, ValueError):
-            if silent:
-                return None
-            errors.append("Свечение при наведении должно быть числом.")
-            hover_multiplier = self._defaults["hover_glow_multiplier"]
-
-        gradient_start = self.gradient_start_var.get().strip()
-        gradient_end = self.gradient_end_var.get().strip()
-        glow_color = self.glow_color_var.get().strip()
-
-        try:
-            self.winfo_rgb(gradient_start)
-            self.winfo_rgb(gradient_end)
-            gradient_colors = (gradient_start, gradient_end)
-        except tk.TclError:
-            if silent:
-                return None
-            errors.append("Некорректные значения градиента. Используйте HEX или имя цвета.")
-            gradient_colors = self._defaults["gradient_colors"]
-
-        try:
-            self.winfo_rgb(glow_color)
-        except tk.TclError:
-            if silent:
-                return None
-            errors.append("Некорректный цвет свечения.")
-            glow_color = self._defaults["glow_color"]
-
-        layers_text = self.layers_text.get("1.0", "end").strip()
-        glow_layers: List[Tuple[int, float]] = []
-        if layers_text:
-            for index, line in enumerate(layers_text.splitlines(), start=1):
-                line = line.strip()
-                if not line:
-                    continue
-                parts = [part.strip() for part in line.split(",") if part.strip()]
-                if len(parts) != 2:
-                    if silent:
-                        return None
-                    errors.append(
-                        f"Строка {index}: используйте формат 'радиус, сила'."
-                    )
-                    continue
-                try:
-                    radius = int(float(parts[0]))
-                    strength = float(parts[1])
-                except (TypeError, ValueError):
-                    if silent:
-                        return None
-                    errors.append(f"Строка {index}: радиус и сила должны быть числами.")
-                    continue
-                if radius < 0 or strength < 0:
-                    if silent:
-                        return None
-                    errors.append(f"Строка {index}: значения должны быть неотрицательными.")
-                    continue
-                glow_layers.append((radius, strength))
-        else:
-            glow_layers = list(self._defaults["glow_layers"])
-
-        if not glow_layers:
-            if silent:
-                return None
-            errors.append("Добавьте хотя бы один слой свечения.")
-            glow_layers = list(self._defaults["glow_layers"])
-
-        if errors:
-            if not silent and hasattr(self._master, "show_error"):
-                self._master.show_error("\n".join(errors))
-            return None
-
-        return {
-            "border_thickness": border_thickness,
-            "gradient_colors": tuple(gradient_colors),
-            "glow_color": glow_color,
-            "glow_layers": tuple(glow_layers),
-            "hover_glow_multiplier": hover_multiplier,
-            "idle_glow_multiplier": idle_multiplier,
-            "animation_speed": animation_speed,
-            "corner_radius": corner_radius,
-        }
-
-    def _reset_defaults(self) -> None:
-        self.border_var.set(self._format_number(self._defaults["border_thickness"]))
-        self.gradient_start_var.set(self._defaults["gradient_colors"][0])
-        self.gradient_end_var.set(self._defaults["gradient_colors"][1])
-        self.glow_color_var.set(self._defaults["glow_color"])
-        self.idle_glow_var.set(self._format_number(self._defaults["idle_glow_multiplier"]))
-        self.hover_glow_var.set(self._format_number(self._defaults["hover_glow_multiplier"]))
-        self.animation_speed_var.set(str(self._defaults["animation_speed"]))
-        self.corner_radius_var.set(str(self._defaults["corner_radius"]))
-        self.layers_text.delete("1.0", "end")
-        self.layers_text.insert(
-            "1.0",
-            "\n".join(
-                f"{radius}, {self._format_number(strength)}" for radius, strength in self._defaults["glow_layers"]
-            ),
-        )
-        self._update_preview()
-
-    def _update_preview(self, *_args) -> None:
-        settings = self._collect_settings(silent=True)
-        if settings is None:
-            return
-
-        if self._preview_button is not None:
-            self._preview_button.destroy()
-
-        button_height = getattr(self._master, "button_height", 44)
-        button_width = max(int(button_height * 5), 220)
-        self._preview_button = GlowButton(
-            self.preview_container,
-            text="Предпросмотр",
-            command=None,
-            width=button_width,
-            height=button_height,
-            font=self._font,
-            **self._base_button_kwargs,
-            **settings,
-        )
-        self._preview_button.pack(pady=(0, 10))
-
-    def _on_save(self) -> None:
-        settings = self._collect_settings(silent=False)
-        if settings is None:
-            return
-        self.result = settings
-        self.destroy()
-
-    def _on_cancel(self) -> None:
-        self.result = None
-        self.destroy()
-
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -924,9 +570,6 @@ class Application(tk.Tk):
         self.iconbitmap(self.icon_path)
 
         self.config_data = self.load_config()
-        self.glow_settings = self._load_glow_settings()
-        self._store_glow_settings()
-        self._glow_settings_dialog = None
 
         # Путь к вашему шрифту
         font_path = os.path.join(
@@ -994,7 +637,7 @@ class Application(tk.Tk):
         self.frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
         self.frame.pack(padx=20, pady=20, expand=True, fill="both")
 
-        # Заголовок и кнопка настроек свечения
+        # Заголовок
         header_font = ctk.CTkFont(
             family=custom_font.actual("family"),
             size=max(font_size + 10, 28),
@@ -1009,24 +652,7 @@ class Application(tk.Tk):
             font=header_font,
             style="Custom.TLabel",
         )
-        self.label.pack(side="left", pady=20, padx=(0, 12))
-
-        self.glow_settings_button = ctk.CTkButton(
-            header_frame,
-            text="✨ Свечение",
-            command=self.open_glow_settings,
-            corner_radius=self.button_corner_radius,
-            fg_color=self.button_fg_color,
-            hover_color=self.button_hover_color,
-            bg_color="#2f2f2f",
-            text_color=self.button_text_color,
-            border_width=0,
-            font=self.custom_font,
-            height=self.button_height,
-            width=max(int(self.button_height * 4), 140),
-        )
-        self.glow_settings_button.pack(side="right", pady=20, padx=(12, 0))
-        self._apply_button_hover_effect(self.glow_settings_button)
+        self.label.pack(pady=20)
 
         self.groups_container = ctk.CTkFrame(self.frame, fg_color="#2f2f2f")
         self.groups_container.pack(expand=True, fill="both")
@@ -1258,142 +884,21 @@ class Application(tk.Tk):
             self.ask_button.destroy()
 
         width = max(int(self.button_height * 5), 220)
-        settings = self.glow_settings
-        self.ask_button = GlowButton(
+        self.ask_button = ctk.CTkButton(
             self.generator_group,
             text="Сгенерировать",
             command=self.ask_questions,
             width=width,
             height=self.button_height,
-            border_thickness=settings["border_thickness"],
-            gradient_colors=settings["gradient_colors"],
-            glow_color=settings["glow_color"],
-            glow_layers=settings["glow_layers"],
-            hover_glow_multiplier=settings["hover_glow_multiplier"],
-            idle_glow_multiplier=settings["idle_glow_multiplier"],
-            animation_speed=settings["animation_speed"],
-            corner_radius=settings["corner_radius"],
-            font=self.custom_font,
-            text_color=self.button_text_color,
+            corner_radius=self.button_corner_radius,
             fg_color=self.button_fg_color,
             hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
+            text_color=self.button_text_color,
+            font=self.custom_font,
         )
         self.ask_button.pack(pady=(0, 8))
-
-    def open_glow_settings(self) -> None:
-        existing = getattr(self, "_glow_settings_dialog", None)
-        if existing is not None and existing.winfo_exists():
-            existing.focus_set()
-            return
-
-        dialog = GlowSettingsDialog(
-            self,
-            self.glow_settings,
-            self._default_glow_settings(),
-            self.custom_font,
-            self.icon_path,
-        )
-        self._glow_settings_dialog = dialog
-        self.wait_window(dialog)
-        self._glow_settings_dialog = None
-        if dialog.result is None:
-            return
-
-        self.glow_settings = dialog.result
-        self._apply_glow_settings()
-        self.save_config()
-
-    def _apply_glow_settings(self) -> None:
-        self._store_glow_settings()
-        self._create_generate_button()
-
-    def _default_glow_settings(self) -> Dict[str, Any]:
-        return {
-            "border_thickness": 0.4,
-            "gradient_colors": ("#ff0080", "#ff00c8"),
-            "glow_color": "#ff3cff",
-            "glow_layers": ((2, 0.65), (4, 0.45), (6, 0.25)),
-            "hover_glow_multiplier": 1.35,
-            "idle_glow_multiplier": 1.0,
-            "animation_speed": 2,
-            "corner_radius": 10,
-        }
-
-    def _load_glow_settings(self) -> Dict[str, Any]:
-        defaults = self._default_glow_settings()
-        raw = self.config_data.get("glow_settings")
-        if not raw:
-            return defaults.copy()
-        try:
-            loaded = json.loads(raw)
-        except json.JSONDecodeError:
-            return defaults.copy()
-
-        settings = defaults.copy()
-
-        def _float_value(key: str, default: float) -> float:
-            try:
-                return float(loaded.get(key, default))
-            except (TypeError, ValueError):
-                return default
-
-        def _int_value(key: str, default: int, minimum: int = 0) -> int:
-            try:
-                value = int(float(loaded.get(key, default)))
-            except (TypeError, ValueError):
-                return default
-            return max(minimum, value)
-
-        settings["border_thickness"] = max(0.0, _float_value("border_thickness", defaults["border_thickness"]))
-        settings["hover_glow_multiplier"] = max(0.0, _float_value("hover_glow_multiplier", defaults["hover_glow_multiplier"]))
-        settings["idle_glow_multiplier"] = max(0.0, _float_value("idle_glow_multiplier", defaults["idle_glow_multiplier"]))
-        settings["animation_speed"] = max(1, _int_value("animation_speed", defaults["animation_speed"], minimum=1))
-        settings["corner_radius"] = max(0, _int_value("corner_radius", defaults["corner_radius"]))
-
-        gradient_colors = loaded.get("gradient_colors")
-        if isinstance(gradient_colors, (list, tuple)) and len(gradient_colors) >= 2:
-            settings["gradient_colors"] = (str(gradient_colors[0]), str(gradient_colors[1]))
-
-        glow_color = loaded.get("glow_color")
-        if isinstance(glow_color, str) and glow_color:
-            settings["glow_color"] = glow_color
-
-        layers = loaded.get("glow_layers")
-        parsed_layers: List[Tuple[int, float]] = []
-        if isinstance(layers, (list, tuple)):
-            for item in layers:
-                if not isinstance(item, (list, tuple)) or len(item) != 2:
-                    continue
-                radius, strength = item
-                try:
-                    radius_value = max(0, int(float(radius)))
-                    strength_value = max(0.0, float(strength))
-                except (TypeError, ValueError):
-                    continue
-                parsed_layers.append((radius_value, strength_value))
-        if parsed_layers:
-            settings["glow_layers"] = tuple(parsed_layers)
-
-        return settings
-
-    def _store_glow_settings(self) -> None:
-        self.config_data["glow_settings"] = self._serialize_glow_settings(self.glow_settings)
-
-    def _serialize_glow_settings(self, settings: Dict[str, Any]) -> str:
-        payload = {
-            "border_thickness": float(settings["border_thickness"]),
-            "gradient_colors": list(settings["gradient_colors"]),
-            "glow_color": settings["glow_color"],
-            "glow_layers": [
-                [int(radius), float(strength)] for radius, strength in settings["glow_layers"]
-            ],
-            "hover_glow_multiplier": float(settings["hover_glow_multiplier"]),
-            "idle_glow_multiplier": float(settings["idle_glow_multiplier"]),
-            "animation_speed": int(settings["animation_speed"]),
-            "corner_radius": int(settings["corner_radius"]),
-        }
-        return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        self._apply_button_hover_effect(self.ask_button)
 
     def _parse_geometry(self, geometry: str) -> tuple[int, int, str]:
         size_part = geometry
@@ -1986,7 +1491,6 @@ class Application(tk.Tk):
     def on_closing(self):
         self.config_data["geometry"] = self.geometry()
         self.config_data["font_size"] = str(self.custom_font.cget("size"))
-        self._store_glow_settings()
         self.save_config()
         self.destroy()
 
