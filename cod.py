@@ -489,7 +489,7 @@ class CustomInputDialog(ctk.CTkToplevel):
         self._label = ctk.CTkLabel(
             self, text=question, text_color="#eeeeee", font=font
         )
-        self._label.pack(padx=20, pady=(20, 10))
+        self._label.pack(padx=16, pady=(12, 8))
 
         border_width = getattr(master, "button_border_width", 1)
         entry_border_width = getattr(master, "entry_border_width", 0)
@@ -505,16 +505,22 @@ class CustomInputDialog(ctk.CTkToplevel):
             border_width=entry_border_width,
             font=font,
         )
-        self._entry.pack(padx=20, pady=(0, 20))
+        self._entry.pack(padx=16, pady=(0, 12))
 
         entry_height = getattr(master, "entry_height", None)
         if entry_height:
             self._entry.configure(height=entry_height)
 
         button_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        button_frame.pack(padx=20, pady=(0, 20))
+        button_frame.pack(padx=16, pady=(0, 12))
 
         button_text_color = getattr(master, "button_text_color", "#eeeeee")
+
+        compact_button_width = max(
+            getattr(master, "button_width", 0) // 2,
+            int(getattr(master, "button_height", 40) * 3),
+            140,
+        )
 
         self._ok_button = ctk.CTkButton(
             button_frame,
@@ -526,6 +532,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             corner_radius=getattr(master, "button_corner_radius", 12),
             border_width=border_width,
             font=font,
+            width=compact_button_width,
         )
         self._ok_button.pack(side="left", padx=(0, 10))
 
@@ -539,6 +546,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             corner_radius=getattr(master, "button_corner_radius", 12),
             border_width=border_width,
             font=font,
+            width=compact_button_width,
         )
         self._cancel_button.pack(side="left")
 
@@ -1568,6 +1576,8 @@ class Application(tk.Tk):
         def cancel():
             dialog.destroy()
 
+        compact_button_width = max(self.button_width // 2, int(self.button_height * 3), 140)
+
         ok_button = ctk.CTkButton(
             button_frame,
             text="OK",
@@ -1579,6 +1589,7 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
             height=self.button_height,
+            width=compact_button_width,
         )
         ok_button.pack(side="left", padx=(0, 10))
         self._apply_button_hover_effect(ok_button)
@@ -1594,6 +1605,7 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
             height=self.button_height,
+            width=compact_button_width,
         )
         cancel_button.pack(side="left")
         self._apply_button_hover_effect(cancel_button)
@@ -1673,7 +1685,7 @@ class Application(tk.Tk):
         popup.grab_set()
 
         frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
-        frame.pack(fill="both", expand=True, padx=20, pady=20)
+        frame.pack(fill="both", expand=True, padx=16, pady=16)
 
         message_font = ctk.CTkFont(
             family=self.custom_font.actual("family"),
@@ -1686,7 +1698,7 @@ class Application(tk.Tk):
 
         if use_scrollable:
             content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
-            content_container.pack(fill="both", expand=True, pady=(0, 16))
+            content_container.pack(fill="both", expand=True, pady=(12, 12))
 
             textbox = ctk.CTkTextbox(
                 content_container,
@@ -1715,9 +1727,10 @@ class Application(tk.Tk):
                 justify="center",
                 anchor="center",
             )
-            label.pack(fill="both", expand=True, padx=12, pady=(0, 16))
+            label.pack(fill="x", padx=12, pady=(12, 12))
             content_widget = label
 
+        compact_button_width = max(self.button_width // 2, int(self.button_height * 3), 140)
         close_button = ctk.CTkButton(
             frame,
             text="Закрыть",
@@ -1729,10 +1742,10 @@ class Application(tk.Tk):
             text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
-            width=self.button_width,
+            width=compact_button_width,
             height=self.button_height,
         )
-        close_button.pack(pady=(0, 4))
+        close_button.pack(pady=(4, 12))
         self._apply_button_hover_effect(close_button)
 
         max_width = min(self.winfo_screenwidth() - 160, 720)
