@@ -521,18 +521,18 @@ class CustomInputDialog(ctk.CTkToplevel):
         base_button_height = getattr(master, "button_height", 40)
         base_button_width = getattr(master, "button_width", 220)
         compact_button_width = max(
-            min(base_button_width, 300),
-            int(base_button_height * 2.6),
-            160,
+            min(base_button_width // 2, 220),
+            int(base_button_height * 2.2),
+            110,
         )
         button_corner_radius = max(
             getattr(master, "button_corner_radius", 12),
-            base_button_height // 2 + 12,
+            base_button_height,
         )
 
         self._ok_button = ctk.CTkButton(
             button_frame,
-            text="OK",
+            text="Ок",
             command=self._ok,
             fg_color=fg_color,
             hover_color=hover_color,
@@ -546,7 +546,7 @@ class CustomInputDialog(ctk.CTkToplevel):
 
         self._cancel_button = ctk.CTkButton(
             button_frame,
-            text="Cancel",
+            text="Отмена",
             command=self._cancel,
             fg_color=fg_color,
             hover_color=hover_color,
@@ -1640,13 +1640,13 @@ class Application(tk.Tk):
         def cancel():
             dialog.destroy()
 
-        compact_button_width = max(self.button_width // 2, int(self.button_height * 3), 140)
+        compact_button_width = max(self.button_width // 2, int(self.button_height * 2.2), 120)
 
         ok_button = ctk.CTkButton(
             button_frame,
-            text="OK",
+            text="Ок",
             command=submit,
-            corner_radius=self.button_corner_radius,
+            corner_radius=max(self.button_corner_radius, self.button_height),
             fg_color="#313131",
             hover_color="#3e3e3e",
             text_color=self.button_text_color,
@@ -1660,9 +1660,9 @@ class Application(tk.Tk):
 
         cancel_button = ctk.CTkButton(
             button_frame,
-            text="Cancel",
+            text="Отмена",
             command=cancel,
-            corner_radius=self.button_corner_radius,
+            corner_radius=max(self.button_corner_radius, self.button_height),
             fg_color="#313131",
             hover_color="#3e3e3e",
             text_color=self.button_text_color,
