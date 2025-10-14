@@ -857,14 +857,6 @@ class Application(tk.Tk):
 
         text = "НЕЙРО-СТРАЖ"
 
-        shadow_label = ctk.CTkLabel(
-            container,
-            text=text,
-            font=font,
-            text_color="#0d0d0d",
-        )
-        shadow_label.place(relx=0.5, rely=0.5, anchor="center", x=1, y=1)
-
         main_label = ctk.CTkLabel(
             container,
             text=text,
