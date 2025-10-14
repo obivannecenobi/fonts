@@ -575,13 +575,13 @@ class CustomInputDialog(ctk.CTkToplevel):
         master.update_idletasks()
         center_helper = getattr(master, "_center_window", None)
         if callable(center_helper):
-            center_helper(self)
+            center_helper(self, relative_to=master)
         else:
             width = max(self.winfo_width(), self.winfo_reqwidth(), 1)
             height = max(self.winfo_height(), self.winfo_reqheight(), 1)
             x = master.winfo_rootx() + (master.winfo_width() - width) // 2
             y = master.winfo_rooty() + (master.winfo_height() - height) // 2
-            self.geometry(f"{width}x{height}+{max(x, 0)}+{max(y, 0)}")
+            self.geometry(f"{width}x{height}+{int(x)}+{int(y)}")
 
     def _ok(self) -> None:
         self.result = self._entry.get()
@@ -1013,6 +1013,8 @@ class Application(tk.Tk):
         else:
             parent = relative_to
 
+        constrain_to_screen = True
+
         if parent is not None and parent.winfo_ismapped():
             parent.update_idletasks()
             parent_width = parent.winfo_width()
@@ -1036,14 +1038,16 @@ class Application(tk.Tk):
 
             x = parent_x + (parent_width - width) // 2
             y = parent_y + (parent_height - height) // 2
+            constrain_to_screen = False
         else:
             x = (screen_width - width) // 2
             y = (screen_height - height) // 2
 
-        max_x = max(screen_width - width, 0)
-        max_y = max(screen_height - height, 0)
-        x = min(max(x, 0), max_x)
-        y = min(max(y, 0), max_y)
+        if constrain_to_screen:
+            max_x = max(screen_width - width, 0)
+            max_y = max(screen_height - height, 0)
+            x = min(max(x, 0), max_x)
+            y = min(max(y, 0), max_y)
 
         window.geometry(f"{width}x{height}+{x}+{y}")
 
