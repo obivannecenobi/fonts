@@ -599,7 +599,11 @@ class Application(tk.Tk):
         self.button_height = max(int(font_size * 2.1), 40)
         self.entry_height = self.button_height
         self.button_text_color = "#f2f2f2"
-        self.neon_text_color = "#ffffff"
+        self.neon_text_color = "#86fff9"
+        self.button_fg_color = "#313131"
+        self.button_hover_color = "#1c1c1c"
+        self.button_border_color = "#4b4b4b"
+        self.button_border_width = 2
 
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
@@ -698,7 +702,7 @@ class Application(tk.Tk):
         self._add_separator(self.groups_container)
 
         fix_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
-        fix_group.pack(fill="x", padx=10, pady=(0, 10))
+        fix_group.pack(fill="x", padx=10, pady=(8, 10))
 
         self.duplicates_button = ctk.CTkButton(
             fix_group,
@@ -799,7 +803,7 @@ class Application(tk.Tk):
         self._add_separator(self.groups_container)
 
         convert_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
-        convert_group.pack(fill="x", padx=10, pady=(0, 10))
+        convert_group.pack(fill="x", padx=10, pady=(8, 10))
 
         self.convert_button = ctk.CTkButton(
             convert_group,
@@ -833,13 +837,27 @@ class Application(tk.Tk):
         )
         self._apply_button_hover_effect(self.upload_button)
 
+        self.update_idletasks()
+        width, height, position = self._parse_geometry(self.geometry())
+        content_height = self.frame.winfo_reqheight() + 40
+        max_height = self.winfo_screenheight() - 80
+        adjusted_min_height = max(min_height, min(content_height, max_height))
+        self.minsize(min_width, adjusted_min_height)
+        target_height = min(max(height, content_height), max_height)
+        if target_height > height:
+            self.geometry(f"{width}x{target_height}{position}")
+
     def _apply_button_hover_effect(self, button: ctk.CTkButton) -> None:
-        default_color = button.cget("text_color")
-        if isinstance(default_color, tuple):
-            default_color = default_color[0]
-        if not default_color:
-            default_color = self.button_text_color
-            button.configure(text_color=default_color)
+        button.configure(
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
+            bg_color="#2f2f2f",
+            text_color=self.button_text_color,
+            border_width=self.button_border_width,
+            border_color=self.button_border_color,
+        )
+
+        default_color = self.button_text_color
 
         def _on_enter(_: tk.Event) -> None:  # type: ignore[override]
             button.configure(text_color=self.neon_text_color)
@@ -852,10 +870,10 @@ class Application(tk.Tk):
 
     def _add_separator(self, parent: tk.Widget) -> None:
         container = tk.Frame(parent, bg="#2f2f2f")
-        container.pack(fill="x", pady=10)
+        container.pack(fill="x")
 
         line = tk.Frame(container, bg="#ffffff", height=1)
-        line.pack(pady=5)
+        line.pack(pady=8)
 
         def _resize_line(event: tk.Event) -> None:  # type: ignore[override]
             width = int(event.width * (2 / 3))
