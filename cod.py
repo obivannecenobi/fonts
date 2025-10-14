@@ -514,7 +514,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             self._entry.configure(height=entry_height)
 
         button_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        button_frame.pack(padx=16, pady=(0, 12))
+        button_frame.pack(padx=16, pady=(0, 4))
 
         button_text_color = getattr(master, "button_text_color", "#eeeeee")
 
@@ -525,10 +525,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             int(base_button_height * 2.2),
             110,
         )
-        button_corner_radius = max(
-            getattr(master, "button_corner_radius", 12),
-            base_button_height,
-        )
+        button_corner_radius = getattr(master, "button_corner_radius", 12)
 
         self._ok_button = ctk.CTkButton(
             button_frame,
