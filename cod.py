@@ -571,13 +571,15 @@ class CustomInputDialog(ctk.CTkToplevel):
 
         self.update_idletasks()
         master.update_idletasks()
-        x = master.winfo_rootx() + (master.winfo_width() // 2) - (
-            self.winfo_width() // 2
-        )
-        y = master.winfo_rooty() + (master.winfo_height() // 2) - (
-            self.winfo_height() // 2
-        )
-        self.geometry(f"+{x}+{y}")
+        center_helper = getattr(master, "_center_window", None)
+        if callable(center_helper):
+            center_helper(self)
+        else:
+            width = max(self.winfo_width(), self.winfo_reqwidth(), 1)
+            height = max(self.winfo_height(), self.winfo_reqheight(), 1)
+            x = master.winfo_rootx() + (master.winfo_width() - width) // 2
+            y = master.winfo_rooty() + (master.winfo_height() - height) // 2
+            self.geometry(f"{width}x{height}+{max(x, 0)}+{max(y, 0)}")
 
     def _ok(self) -> None:
         self.result = self._entry.get()
@@ -999,8 +1001,8 @@ class Application(tk.Tk):
         """Center *window* either on ``relative_to`` or on the main screen."""
 
         window.update_idletasks()
-        width = max(window.winfo_width(), 1)
-        height = max(window.winfo_height(), 1)
+        width = max(window.winfo_width(), window.winfo_reqwidth(), 1)
+        height = max(window.winfo_height(), window.winfo_reqheight(), 1)
 
         if relative_to is None and window is not self:
             parent: tk.Misc | None = self if self.winfo_exists() else None
@@ -1033,7 +1035,7 @@ class Application(tk.Tk):
         dialog_parent.attributes("-alpha", 0.0)
         self._apply_window_icon(dialog_parent)
         dialog_parent.update_idletasks()
-        self._center_window(dialog_parent)
+        self._center_window(dialog_parent, relative_to=self)
         dialog_parent.deiconify()
         dialog_parent.lift()
         dialog_parent.update_idletasks()
@@ -1289,7 +1291,7 @@ class Application(tk.Tk):
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
         popup.update_idletasks()
-        self._center_window(popup)
+        self._center_window(popup, relative_to=self)
 
     def find_formatted_separators(self):
         file_path = self._show_file_dialog(
@@ -1374,7 +1376,7 @@ class Application(tk.Tk):
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
         popup.update_idletasks()
-        self._center_window(popup)
+        self._center_window(popup, relative_to=self)
 
     def check_duplicate_chapters(self):
         file_path = self._show_file_dialog(
@@ -1434,7 +1436,7 @@ class Application(tk.Tk):
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
         popup.update_idletasks()
-        self._center_window(popup)
+        self._center_window(popup, relative_to=self)
 
     def check_chapter_numbering(self):
         file_path = self._show_file_dialog(
@@ -1609,7 +1611,7 @@ class Application(tk.Tk):
             close_btn.pack(pady=(0, 10))
             self._apply_button_hover_effect(close_btn)
             popup.update_idletasks()
-            self._center_window(popup)
+            self._center_window(popup, relative_to=self)
 
         def cancel():
             dialog.destroy()
@@ -1648,7 +1650,7 @@ class Application(tk.Tk):
         cancel_button.pack(side="left")
         self._apply_button_hover_effect(cancel_button)
         dialog.update_idletasks()
-        self._center_window(dialog)
+        self._center_window(dialog, relative_to=self)
         dialog.grab_set()
         dialog.protocol("WM_DELETE_WINDOW", cancel)
 
@@ -1826,7 +1828,7 @@ class Application(tk.Tk):
 
         popup.geometry(f"{width}x{height}")
         popup.minsize(min(width, min_width), min(height, max_height))
-        self._center_window(popup)
+        self._center_window(popup, relative_to=self)
 
     def load_config(self):
         config = {}
