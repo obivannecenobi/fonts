@@ -607,8 +607,8 @@ class Application(tk.Tk):
         self.button_width = max(int(self.button_height * 5), 220)
         self.entry_height = self.button_height
         self.entry_border_width = 0
-        self.button_text_color = "#f2f2f2"
-        self.neon_text_color = "#ffffff"
+        self.button_text_color = "#f4f4f4"
+        self.button_hover_text_color = "#ffffff"
         self.button_fg_color = "#313131"
         self.button_hover_color = "#1b1b1b"
         self.button_border_color = "#ffffff"
@@ -616,8 +616,6 @@ class Application(tk.Tk):
         self.button_hover_border_width = 2
         self.button_corner_radius = 20
         self.entry_corner_radius = 20
-        self._glow_offset_cache: dict[int, list[tuple[int, int]]] = {}
-
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
 
@@ -852,43 +850,30 @@ class Application(tk.Tk):
             self.geometry(f"{width}x{target_height}{position}")
 
     def _create_neon_header(self, parent: tk.Widget, font: ctk.CTkFont) -> None:
-        canvas_height = int(font.actual("size") * 1.8)
-        self.header_canvas = tk.Canvas(
-            parent,
-            bg="#2f2f2f",
-            highlightthickness=0,
-            height=canvas_height,
-        )
-        self.header_canvas.pack(fill="x", pady=20)
+        container = ctk.CTkFrame(parent, fg_color="#2f2f2f")
+        container.pack(fill="x", pady=20)
+        container.pack_propagate(False)
+        container.configure(height=max(int(font.actual("size") * 1.6), 40))
 
-        font_tuple: tuple[str, int, str] = (
-            font.actual("family"),
-            int(font.actual("size")),
-            font.actual("weight"),
-        )
         text = "НЕЙРО-СТРАЖ"
 
-        glow_layers: list[tuple[str, int]] = [
-            ("#ffffff", 2),
-        ]
+        shadow_label = ctk.CTkLabel(
+            container,
+            text=text,
+            font=font,
+            text_color="#0d0d0d",
+        )
+        shadow_label.place(relx=0.5, rely=0.5, anchor="center", x=1, y=1)
 
-        def _draw(_: tk.Event | None = None) -> None:
-            self.header_canvas.delete("all")
-            width = self.header_canvas.winfo_width()
-            x = width // 2
-            y = canvas_height // 2
+        main_label = ctk.CTkLabel(
+            container,
+            text=text,
+            font=font,
+            text_color="#ffffff",
+        )
+        main_label.place(relx=0.5, rely=0.5, anchor="center")
 
-            self._draw_text_with_glow(
-                self.header_canvas,
-                text,
-                font_tuple,
-                (x, y),
-                glow_layers,
-                "#ffffff",
-            )
-
-        self.header_canvas.bind("<Configure>", _draw)
-        self.header_canvas.after(0, _draw)
+        self.header_label = main_label
 
     def _apply_button_hover_effect(self, button: ctk.CTkButton) -> None:
         button.configure(
@@ -900,47 +885,15 @@ class Application(tk.Tk):
             border_color=self.button_border_color,
         )
 
-        if not hasattr(button, "_original_text"):
-            button._original_text = button.cget("text")
-        button._neon_overlay: tk.Canvas | None = None
-
         def _show_hover(_: tk.Event | None = None) -> None:
-            if not getattr(button, "_original_text", ""):
-                button._original_text = button.cget("text")
-
             button.configure(
                 fg_color=self.button_hover_color,
-                text_color=self.neon_text_color,
+                text_color=self.button_hover_text_color,
                 border_width=self.button_hover_border_width,
             )
 
-            if button._neon_overlay is not None:
-                button._neon_overlay.destroy()
-                button._neon_overlay = None
-
-            original_text = getattr(button, "_original_text", "")
-            button.configure(text="")
-            button._neon_overlay = self._create_button_neon_overlay(
-                button,
-                original_text,
-            )
-            button._neon_overlay.bind("<Leave>", _hide_hover)
-
-        def _hide_hover(event: tk.Event | None = None) -> None:
-            if (
-                event is not None
-                and button._neon_overlay is not None
-                and button.winfo_containing(event.x_root, event.y_root)
-                in {button, button._neon_overlay}
-            ):
-                return
-
-            if button._neon_overlay is not None:
-                button._neon_overlay.destroy()
-                button._neon_overlay = None
-
+        def _hide_hover(_: tk.Event | None = None) -> None:
             button.configure(
-                text=getattr(button, "_original_text", ""),
                 fg_color=self.button_fg_color,
                 text_color=self.button_text_color,
                 border_width=self.button_border_width,
@@ -961,96 +914,6 @@ class Application(tk.Tk):
             line.configure(width=max(width, 1))
 
         container.bind("<Configure>", _resize_line)
-
-    def _generate_glow_offsets(self, radius: int) -> list[tuple[int, int]]:
-        if radius <= 0:
-            return [(0, 0)]
-
-        cached = self._glow_offset_cache.get(radius)
-        if cached is not None:
-            return cached
-
-        offsets: set[tuple[int, int]] = set()
-        for dx in range(-radius, radius + 1):
-            for dy in range(-radius, radius + 1):
-                if dx * dx + dy * dy <= radius * radius:
-                    offsets.add((dx, dy))
-
-        result = list(offsets)
-        self._glow_offset_cache[radius] = result
-        return result
-
-    def _draw_text_with_glow(
-        self,
-        canvas: tk.Canvas,
-        text: str,
-        font_tuple: tuple[str, int, str],
-        center: tuple[int, int],
-        layers: list[tuple[str, int]],
-        base_color: str,
-    ) -> None:
-        x, y = center
-
-        for color, radius in layers:
-            for dx, dy in self._generate_glow_offsets(radius):
-                canvas.create_text(
-                    x + dx,
-                    y + dy,
-                    text=text,
-                    fill=color,
-                    font=font_tuple,
-                )
-
-        canvas.create_text(
-            x,
-            y,
-            text=text,
-            fill=base_color,
-            font=font_tuple,
-        )
-
-    def _create_button_neon_overlay(self, button: ctk.CTkButton, text: str) -> tk.Canvas:
-        canvas = tk.Canvas(
-            button,
-            highlightthickness=0,
-            bd=0,
-            bg=self.button_hover_color,
-            cursor="hand2",
-        )
-        canvas.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
-
-        font_tuple: tuple[str, int, str] = (
-            self.custom_font.actual("family"),
-            int(self.custom_font.actual("size")),
-            self.custom_font.actual("weight"),
-        )
-        glow_layers: list[tuple[str, int]] = [
-            ("#ffffff", 2),
-        ]
-
-        def _draw(_: tk.Event | None = None) -> None:
-            canvas.delete("all")
-            width = canvas.winfo_width() // 2
-            height = canvas.winfo_height() // 2
-            self._draw_text_with_glow(
-                canvas,
-                text,
-                font_tuple,
-                (width, height),
-                glow_layers,
-                self.neon_text_color,
-            )
-
-        canvas.bind("<Configure>", _draw)
-        canvas.after(0, _draw)
-
-        for sequence in ("<ButtonPress-1>", "<ButtonRelease-1>"):
-            canvas.bind(
-                sequence,
-                lambda event, seq=sequence: button.event_generate(seq),
-            )
-
-        return canvas
 
     def _create_generate_button(self) -> None:
         if hasattr(self, "ask_button"):
