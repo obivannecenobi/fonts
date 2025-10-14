@@ -546,7 +546,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             font=font,
             width=compact_button_width,
         )
-        self._ok_button.pack(side="left", padx=(0, 12))
+        self._ok_button.grid(row=0, column=0, sticky="ew", padx=(0, 6))
 
         self._cancel_button = ctk.CTkButton(
             button_frame,
@@ -560,7 +560,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             font=font,
             width=compact_button_width,
         )
-        self._cancel_button.pack(side="left")
+        self._cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
         button_height = getattr(master, "button_height", None)
         if button_height:
@@ -1851,6 +1851,7 @@ class Application(tk.Tk):
         frame.pack(fill="both", expand=True, padx=16, pady=16)
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
+        frame.grid_rowconfigure(1, weight=0)
 
         message_font = ctk.CTkFont(
             family=self.custom_font.actual("family"),
@@ -1864,6 +1865,8 @@ class Application(tk.Tk):
         if use_scrollable:
             content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
             content_container.grid(row=0, column=0, sticky="nsew", pady=(12, 12))
+            content_container.grid_columnconfigure(0, weight=1)
+            content_container.grid_rowconfigure(0, weight=1)
 
             textbox = ctk.CTkTextbox(
                 content_container,
@@ -1875,12 +1878,12 @@ class Application(tk.Tk):
             )
             textbox.insert("1.0", message)
             textbox.configure(state="disabled")
-            textbox.pack(side="left", fill="both", expand=True)
+            textbox.grid(row=0, column=0, sticky="nsew")
 
             scrollbar = ctk.CTkScrollbar(
                 content_container, command=textbox.yview, fg_color="#2f2f2f"
             )
-            scrollbar.pack(side="right", fill="y", padx=(8, 0))
+            scrollbar.grid(row=0, column=1, sticky="ns", padx=(8, 0))
             textbox.configure(yscrollcommand=scrollbar.set)
             content_widget = textbox
         else:
@@ -1923,7 +1926,7 @@ class Application(tk.Tk):
             width=compact_button_width,
             height=self.button_height,
         )
-        close_button.grid(row=1, column=0, pady=(12, 4), sticky="n")
+        close_button.grid(row=1, column=0, padx=12, pady=(8, 4), sticky="ew")
         self._apply_button_hover_effect(close_button)
 
         max_width = min(self.winfo_screenwidth() - 160, 720)
@@ -1940,14 +1943,17 @@ class Application(tk.Tk):
             content_widget.configure(wraplength=width - 80)
             popup.update_idletasks()
 
-        height = popup.winfo_reqheight()
-        content_height = 0
         try:
             content_height = content_widget.winfo_reqheight()
         except tk.TclError:
             content_height = 0
-        height = max(height, content_height + self.button_height + 40)
-        height = min(height, max_height)
+
+        close_button.update_idletasks()
+        button_height = close_button.winfo_reqheight()
+
+        height = popup.winfo_reqheight()
+        minimum_height = content_height + button_height + 48
+        height = min(max(height, minimum_height), max_height)
 
         popup.geometry(f"{width}x{height}")
         popup.minsize(min(width, min_width), min(height, max_height))
