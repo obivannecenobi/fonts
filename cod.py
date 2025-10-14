@@ -479,7 +479,7 @@ class CustomInputDialog(ctk.CTkToplevel):
         border_width = getattr(master, "button_border_width", 1)
         entry_border_width = getattr(master, "entry_border_width", 0)
         fg_color = getattr(master, "button_fg_color", "#313131")
-        hover_color = getattr(master, "button_hover_color", "#1a1a1a")
+        hover_color = getattr(master, "button_hover_color", "#252626")
 
         self._entry = ctk.CTkEntry(
             self,
@@ -610,7 +610,7 @@ class Application(tk.Tk):
         self.button_text_color = "#f4f4f4"
         self.button_hover_text_color = "#ffffff"
         self.button_fg_color = "#313131"
-        self.button_hover_color = "#1b1b1b"
+        self.button_hover_color = "#252626"
         self.button_border_color = "#ffffff"
         self.button_border_width = 0
         self.button_hover_border_width = 2
