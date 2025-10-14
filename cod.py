@@ -488,10 +488,14 @@ class CustomInputDialog(ctk.CTkToplevel):
         self.configure(fg_color="#2f2f2f")
         self.result = None
 
+        content = ctk.CTkFrame(self, fg_color="#2f2f2f")
+        content.pack(fill="both", expand=True, padx=16, pady=16)
+        content.grid_columnconfigure(0, weight=1)
+
         self._label = ctk.CTkLabel(
-            self, text=question, text_color="#eeeeee", font=font
+            content, text=question, text_color="#eeeeee", font=font, justify="left"
         )
-        self._label.pack(padx=16, pady=(16, 8))
+        self._label.grid(row=0, column=0, sticky="ew", pady=(0, 12))
 
         border_width = getattr(master, "button_border_width", 1)
         entry_border_width = getattr(master, "entry_border_width", 0)
@@ -499,7 +503,7 @@ class CustomInputDialog(ctk.CTkToplevel):
         hover_color = getattr(master, "button_hover_color", "#252626")
 
         self._entry = ctk.CTkEntry(
-            self,
+            content,
             fg_color="#ffffff",
             border_color="#2f2f2f",
             text_color="#303030",
@@ -507,14 +511,16 @@ class CustomInputDialog(ctk.CTkToplevel):
             border_width=entry_border_width,
             font=font,
         )
-        self._entry.pack(padx=16, pady=(0, 10))
+        self._entry.grid(row=1, column=0, sticky="ew", pady=(0, 12))
 
         entry_height = getattr(master, "entry_height", None)
         if entry_height:
             self._entry.configure(height=entry_height)
 
-        button_frame = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        button_frame.pack(fill="x", padx=16, pady=(0, 10))
+        button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
+        button_frame.grid(row=2, column=0, sticky="ew", pady=(0, 0))
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
 
         button_text_color = getattr(master, "button_text_color", "#eeeeee")
 
@@ -526,10 +532,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             110,
         )
         entry_corner_radius = getattr(master, "entry_corner_radius", 12)
-        button_corner_radius = max(
-            entry_corner_radius,
-            getattr(master, "button_corner_radius", entry_corner_radius),
-        )
+        button_corner_radius = getattr(master, "button_corner_radius", entry_corner_radius)
 
         self._ok_button = ctk.CTkButton(
             button_frame,
@@ -543,7 +546,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             font=font,
             width=compact_button_width,
         )
-        self._ok_button.pack(side="left", padx=(0, 10))
+        self._ok_button.pack(side="left", padx=(0, 12))
 
         self._cancel_button = ctk.CTkButton(
             button_frame,
@@ -574,12 +577,13 @@ class CustomInputDialog(ctk.CTkToplevel):
 
         self.update_idletasks()
         master.update_idletasks()
+        width = max(self.winfo_reqwidth(), 1)
+        height = max(self.winfo_reqheight(), 1)
+        self.geometry(f"{width}x{height}")
         center_helper = getattr(master, "_center_window", None)
         if callable(center_helper):
             center_helper(self, relative_to=master)
         else:
-            width = max(self.winfo_width(), self.winfo_reqwidth(), 1)
-            height = max(self.winfo_height(), self.winfo_reqheight(), 1)
             x = master.winfo_rootx() + (master.winfo_width() - width) // 2
             y = master.winfo_rooty() + (master.winfo_height() - height) // 2
             self.geometry(f"{width}x{height}+{int(x)}+{int(y)}")
@@ -1071,6 +1075,29 @@ class Application(tk.Tk):
 
         window.geometry(f"{width}x{height}+{x}+{y}")
 
+    def _finalize_dialog_window(
+        self,
+        window: tk.Misc,
+        *,
+        min_width: int = 0,
+        min_height: int = 0,
+        relative_to: tk.Misc | None = None,
+    ) -> None:
+        """Resize and center *window* with optional minimum bounds."""
+
+        window.update_idletasks()
+        requested_width = max(window.winfo_reqwidth(), 1)
+        requested_height = max(window.winfo_reqheight(), 1)
+
+        width = max(requested_width, min_width)
+        height = max(requested_height, min_height)
+
+        window.geometry(f"{width}x{height}")
+        if min_width or min_height:
+            window.minsize(max(min_width, 1), max(min_height, 1))
+
+        self._center_window(window, relative_to=relative_to or self)
+
     def _create_dialog_parent(self) -> tk.Toplevel:
         dialog_parent = tk.Toplevel(self)
         dialog_parent.withdraw()
@@ -1282,7 +1309,6 @@ class Application(tk.Tk):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         self._apply_window_icon(popup)
         popup.title("")
-        popup.geometry("400x400")
         popup.transient(self)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
@@ -1319,7 +1345,7 @@ class Application(tk.Tk):
         tree_scrollbar.grid(row=1, column=1, sticky="ns", pady=(0, 12), padx=(8, 0))
 
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
-        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 0))
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
 
         if len(words_with_pos) > 50:
             save_button = ctk.CTkButton(
@@ -1353,8 +1379,9 @@ class Application(tk.Tk):
         )
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
-        popup.update_idletasks()
-        self._center_window(popup, relative_to=self)
+        self._finalize_dialog_window(
+            popup, min_width=420, min_height=360, relative_to=self
+        )
 
     def find_formatted_separators(self):
         file_path = self._show_file_dialog(
@@ -1375,7 +1402,6 @@ class Application(tk.Tk):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         self._apply_window_icon(popup)
         popup.title("")
-        popup.geometry("360x320")
         popup.transient(self)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
@@ -1406,7 +1432,7 @@ class Application(tk.Tk):
         tree_scrollbar.grid(row=1, column=1, sticky="ns", padx=(8, 0), pady=(0, 12))
 
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
-        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 0))
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
 
         def fix():
             for _, paragraph in separators:
@@ -1448,8 +1474,9 @@ class Application(tk.Tk):
         )
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
-        popup.update_idletasks()
-        self._center_window(popup, relative_to=self)
+        self._finalize_dialog_window(
+            popup, min_width=360, min_height=320, relative_to=self
+        )
 
     def check_duplicate_chapters(self):
         file_path = self._show_file_dialog(
@@ -1469,7 +1496,6 @@ class Application(tk.Tk):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
         self._apply_window_icon(popup)
         popup.title("")
-        popup.geometry("450x400")
         popup.transient(self)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
@@ -1509,7 +1535,7 @@ class Application(tk.Tk):
         tree_scrollbar.grid(row=1, column=1, sticky="ns", padx=(8, 0), pady=(0, 12))
 
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
-        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 0))
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
 
         close_button = ctk.CTkButton(
             button_frame,
@@ -1526,8 +1552,9 @@ class Application(tk.Tk):
         )
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
-        popup.update_idletasks()
-        self._center_window(popup, relative_to=self)
+        self._finalize_dialog_window(
+            popup, min_width=450, min_height=380, relative_to=self
+        )
 
     def check_chapter_numbering(self):
         file_path = self._show_file_dialog(
@@ -1677,16 +1704,22 @@ class Application(tk.Tk):
                 f"{os.path.basename(path)}: {'успех' if ok else 'ошибка'}"
                 for path, ok in results.items()
             ]
+
+            content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+            content.pack(fill="both", expand=True, padx=16, pady=16)
+
             label = ctk.CTkLabel(
-                popup,
+                content,
                 text="\n".join(lines) or "Нет результатов",
                 text_color="#eeeeee",
                 justify="left",
                 font=self.custom_font,
+                anchor="w",
             )
-            label.pack(padx=20, pady=20)
+            label.pack(fill="both", expand=True, pady=(0, 12))
+
             close_btn = ctk.CTkButton(
-                popup,
+                content,
                 text="Закрыть",
                 command=popup.destroy,
                 corner_radius=self.button_corner_radius,
@@ -1699,10 +1732,9 @@ class Application(tk.Tk):
                 height=self.button_height,
                 width=self.button_width,
             )
-            close_btn.pack(pady=(0, 10))
+            close_btn.pack()
             self._apply_button_hover_effect(close_btn)
-            popup.update_idletasks()
-            self._center_window(popup, relative_to=self)
+            self._finalize_dialog_window(popup, min_width=360, relative_to=self)
 
         def cancel():
             dialog.destroy()
@@ -1891,7 +1923,7 @@ class Application(tk.Tk):
             width=compact_button_width,
             height=self.button_height,
         )
-        close_button.grid(row=1, column=0, pady=(0, 4), sticky="n")
+        close_button.grid(row=1, column=0, pady=(12, 4), sticky="n")
         self._apply_button_hover_effect(close_button)
 
         max_width = min(self.winfo_screenwidth() - 160, 720)
