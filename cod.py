@@ -480,7 +480,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color="#ffffff",
             border_color="#2f2f2f",
             text_color="#303030",
-            corner_radius=12,
+            corner_radius=getattr(master, "entry_corner_radius", 12),
             border_width=0,
             font=font,
         )
@@ -502,7 +502,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color="#313131",
             hover_color="#3e3e3e",
             text_color=button_text_color,
-            corner_radius=12,
+            corner_radius=getattr(master, "button_corner_radius", 12),
             border_width=0,
             font=font,
         )
@@ -515,7 +515,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color="#313131",
             hover_color="#3e3e3e",
             text_color=button_text_color,
-            corner_radius=12,
+            corner_radius=getattr(master, "button_corner_radius", 12),
             border_width=0,
             font=font,
         )
@@ -599,11 +599,13 @@ class Application(tk.Tk):
         self.button_height = max(int(font_size * 2.1), 40)
         self.entry_height = self.button_height
         self.button_text_color = "#f2f2f2"
-        self.neon_text_color = "#86fff9"
+        self.neon_text_color = "#ffffff"
         self.button_fg_color = "#313131"
-        self.button_hover_color = "#1c1c1c"
-        self.button_border_color = "#4b4b4b"
+        self.button_hover_color = "#181818"
+        self.button_border_color = "#ffffff"
         self.button_border_width = 2
+        self.button_corner_radius = 20
+        self.entry_corner_radius = 20
 
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
@@ -657,7 +659,7 @@ class Application(tk.Tk):
             generator_group,
             text="Выбрать папку",
             command=self.browse_folder,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -672,7 +674,7 @@ class Application(tk.Tk):
         self.path_entry = ctk.CTkEntry(
             generator_group,
             placeholder_text="Куда сейвим?",
-            corner_radius=12,
+            corner_radius=self.entry_corner_radius,
             fg_color="#ffffff",
             text_color="#303030",
             border_color="#2f2f2f",
@@ -687,7 +689,7 @@ class Application(tk.Tk):
             generator_group,
             text="Сгенерировать",
             command=self.ask_questions,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -702,13 +704,13 @@ class Application(tk.Tk):
         self._add_separator(self.groups_container)
 
         fix_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
-        fix_group.pack(fill="x", padx=10, pady=(8, 10))
+        fix_group.pack(fill="x", padx=10, pady=(12, 10))
 
         self.duplicates_button = ctk.CTkButton(
             fix_group,
             text="Повторение",
             command=self.check_duplicate_chapters,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -724,7 +726,7 @@ class Application(tk.Tk):
             fix_group,
             text="Разделители",
             command=self.find_formatted_separators,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -740,7 +742,7 @@ class Application(tk.Tk):
             fix_group,
             text="Нумерация",
             command=self.check_chapter_numbering,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -756,7 +758,7 @@ class Application(tk.Tk):
             fix_group,
             text="Артефакты",
             command=self.check_english_words,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -772,7 +774,7 @@ class Application(tk.Tk):
             fix_group,
             text="Разделить",
             command=self.split_chapters_evenly,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -788,7 +790,7 @@ class Application(tk.Tk):
             fix_group,
             text="Разбить",
             command=self.split_document,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -803,13 +805,13 @@ class Application(tk.Tk):
         self._add_separator(self.groups_container)
 
         convert_group = ctk.CTkFrame(self.groups_container, fg_color="#2f2f2f")
-        convert_group.pack(fill="x", padx=10, pady=(8, 10))
+        convert_group.pack(fill="x", padx=10, pady=(12, 10))
 
         self.convert_button = ctk.CTkButton(
             convert_group,
             text="Законвертить",
             command=self.convert_docx_to_fb2,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -826,7 +828,7 @@ class Application(tk.Tk):
             self.groups_container,
             text="Залить на Rulate",
             command=self.open_upload_dialog,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             bg_color="#2f2f2f",
@@ -853,17 +855,23 @@ class Application(tk.Tk):
             hover_color=self.button_hover_color,
             bg_color="#2f2f2f",
             text_color=self.button_text_color,
-            border_width=self.button_border_width,
+            border_width=0,
             border_color=self.button_border_color,
         )
 
         default_color = self.button_text_color
 
         def _on_enter(_: tk.Event) -> None:  # type: ignore[override]
-            button.configure(text_color=self.neon_text_color)
+            button.configure(
+                text_color=self.neon_text_color,
+                border_width=self.button_border_width,
+            )
 
         def _on_leave(_: tk.Event) -> None:  # type: ignore[override]
-            button.configure(text_color=default_color)
+            button.configure(
+                text_color=default_color,
+                border_width=0,
+            )
 
         button.bind("<Enter>", _on_enter)
         button.bind("<Leave>", _on_leave)
@@ -873,7 +881,7 @@ class Application(tk.Tk):
         container.pack(fill="x")
 
         line = tk.Frame(container, bg="#ffffff", height=1)
-        line.pack(pady=8)
+        line.pack(pady=(12, 12))
 
         def _resize_line(event: tk.Event) -> None:  # type: ignore[override]
             width = int(event.width * (2 / 3))
@@ -1047,7 +1055,7 @@ class Application(tk.Tk):
                 button_frame,
                 text="Сохранить",
                 command=lambda: self.save_words_to_file(words_with_pos),
-                corner_radius=12,
+                corner_radius=self.button_corner_radius,
                 bg_color="#2f2f2f",
                 fg_color="#313131",
                 hover_color="#3e3e3e",
@@ -1063,7 +1071,7 @@ class Application(tk.Tk):
             button_frame,
             text="Закрыть",
             command=popup.destroy,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
@@ -1128,7 +1136,7 @@ class Application(tk.Tk):
             button_frame,
             text="Устранить форматирование",
             command=fix,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
@@ -1144,7 +1152,7 @@ class Application(tk.Tk):
             button_frame,
             text="Закрыть",
             command=popup.destroy,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
@@ -1200,7 +1208,7 @@ class Application(tk.Tk):
             button_frame,
             text="Закрыть",
             command=popup.destroy,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
@@ -1272,7 +1280,7 @@ class Application(tk.Tk):
                 fg_color="#ffffff",
                 border_color="#2f2f2f",
                 text_color="#303030",
-                corner_radius=12,
+                corner_radius=self.entry_corner_radius,
                 border_width=0,
                 font=self.custom_font,
                 height=self.entry_height,
@@ -1368,7 +1376,7 @@ class Application(tk.Tk):
                 popup,
                 text="Закрыть",
                 command=popup.destroy,
-                corner_radius=12,
+                corner_radius=self.button_corner_radius,
                 bg_color="#2f2f2f",
                 fg_color="#313131",
                 hover_color="#3e3e3e",
@@ -1387,7 +1395,7 @@ class Application(tk.Tk):
             button_frame,
             text="OK",
             command=submit,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             text_color=self.button_text_color,
@@ -1402,7 +1410,7 @@ class Application(tk.Tk):
             button_frame,
             text="Cancel",
             command=cancel,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             text_color=self.button_text_color,
@@ -1500,7 +1508,7 @@ class Application(tk.Tk):
             frame,
             text="Закрыть",
             command=popup.destroy,
-            corner_radius=12,
+            corner_radius=self.button_corner_radius,
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
