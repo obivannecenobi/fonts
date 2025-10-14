@@ -20,12 +20,17 @@ from docx import Document
 from docx.oxml.ns import nsmap, qn
 from docx.text.paragraph import Paragraph
 from importlib import import_module, util
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+from PIL import Image, ImageTk
 
 from rulate_uploader import upload_chapters
 
 
-def split_document(file_path: str) -> List[str]:
+def split_document(
+    file_path: str,
+    directory_getter: Callable[..., str] | None = None,
+) -> List[str]:
     """Split a DOCX document into chapters based on heading pattern.
 
     Parameters
@@ -40,7 +45,8 @@ def split_document(file_path: str) -> List[str]:
     """
 
     heading_pattern = re.compile(r"^Глава\s+\d+(?:\.\d+)?")
-    output_dir = filedialog.askdirectory(
+    chooser = directory_getter if directory_getter is not None else filedialog.askdirectory
+    output_dir = chooser(
         title="Выберите выходной каталог",
         initialdir=os.path.dirname(file_path),
     )
@@ -462,10 +468,18 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
 class CustomInputDialog(ctk.CTkToplevel):
     """Simple dialog asking the user for a single line of text."""
 
-    def __init__(self, master, question: str, font: ctk.CTkFont, icon_path: str):
+    def __init__(
+        self,
+        master,
+        question: str,
+        font: ctk.CTkFont,
+        icon_path: str,
+        icon_photo: tk.PhotoImage | None = None,
+    ):
         super().__init__(master)
         self.icon_path = icon_path
-        self.iconbitmap(self.icon_path)
+        self._icon_photo = icon_photo
+        self._apply_window_icon()
         self.title("")
         self.resizable(False, False)
         self.configure(fg_color="#2f2f2f")
@@ -564,6 +578,17 @@ class CustomInputDialog(ctk.CTkToplevel):
         self.wait_window()
         return self.result
 
+    def _apply_window_icon(self) -> None:
+        try:
+            self.iconbitmap(self.icon_path)
+        except tk.TclError:
+            pass
+        if self._icon_photo is not None:
+            try:
+                self.iconphoto(False, self._icon_photo)
+            except tk.TclError:
+                pass
+
 
 class Application(tk.Tk):
     def __init__(self):
@@ -573,6 +598,13 @@ class Application(tk.Tk):
             "app_icon.ico",
         )
         self.iconbitmap(self.icon_path)
+        self.icon_photo: tk.PhotoImage | None = None
+        try:
+            with Image.open(self.icon_path) as icon_image:
+                self.icon_photo = ImageTk.PhotoImage(icon_image)
+            self.iconphoto(False, self.icon_photo)
+        except Exception:
+            self.icon_photo = None
 
         self.config_data = self.load_config()
 
@@ -894,6 +926,17 @@ class Application(tk.Tk):
         button.bind("<Enter>", _show_hover)
         button.bind("<Leave>", _hide_hover)
 
+    def _apply_window_icon(self, window: tk.Toplevel) -> None:
+        try:
+            window.iconbitmap(self.icon_path)
+        except tk.TclError:
+            pass
+        if self.icon_photo is not None:
+            try:
+                window.iconphoto(False, self.icon_photo)
+            except tk.TclError:
+                pass
+
     def _center_window(self, window: tk.Toplevel) -> None:
         """Center a transient window over the main application window."""
 
@@ -917,6 +960,24 @@ class Application(tk.Tk):
             y = (screen_height - height) // 2
 
         window.geometry(f"{width}x{height}+{max(x, 0)}+{max(y, 0)}")
+
+    def _ask_directory(self, **kwargs) -> str:
+        dialog_parent = tk.Toplevel(self)
+        dialog_parent.withdraw()
+        dialog_parent.overrideredirect(True)
+        dialog_parent.geometry("1x1")
+        dialog_parent.attributes("-alpha", 0.0)
+        self._apply_window_icon(dialog_parent)
+        dialog_parent.update_idletasks()
+        self._center_window(dialog_parent)
+        dialog_parent.deiconify()
+        dialog_parent.lift()
+        dialog_parent.update_idletasks()
+        try:
+            selection = filedialog.askdirectory(parent=dialog_parent, **kwargs)
+        finally:
+            dialog_parent.destroy()
+        return selection or ""
 
     def _add_separator(self, parent: tk.Widget) -> None:
         container = tk.Frame(parent, bg="#2f2f2f")
@@ -972,7 +1033,7 @@ class Application(tk.Tk):
 
 
     def browse_folder(self):
-        folder_selected = filedialog.askdirectory(title="Выберите папку для сохранения")
+        folder_selected = self._ask_directory(title="Выберите папку для сохранения")
         if folder_selected:
             self.path_entry.delete(0, tk.END)
             self.path_entry.insert(0, folder_selected)
@@ -985,7 +1046,7 @@ class Application(tk.Tk):
         if not file_path:
             return
 
-        created = split_document(file_path)
+        created = split_document(file_path, self._ask_directory)
         if created:
             self.show_message(f"Создано {len(created)} файлов")
 
@@ -997,7 +1058,7 @@ class Application(tk.Tk):
         if not file_path:
             return
 
-        output_dir = filedialog.askdirectory(
+        output_dir = self._ask_directory(
             title="Выберите папку для сохранения",
             initialdir=os.path.dirname(file_path),
         )
@@ -1044,7 +1105,7 @@ class Application(tk.Tk):
         if not files:
             return
 
-        destination = filedialog.askdirectory(
+        destination = self._ask_directory(
             title="Выберите папку для FB2 файлов",
             initialdir=os.path.dirname(files[0]),
         )
@@ -1092,9 +1153,10 @@ class Application(tk.Tk):
             return
 
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        popup.iconbitmap(self.icon_path)
+        self._apply_window_icon(popup)
         popup.title("")
         popup.geometry("400x400")
+        popup.transient(self)
 
         tree = ttk.Treeview(
             popup, columns=("word", "paragraph"), show="headings"
@@ -1145,6 +1207,8 @@ class Application(tk.Tk):
         )
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
+        popup.update_idletasks()
+        self._center_window(popup)
 
     def find_formatted_separators(self):
         file_path = filedialog.askopenfilename(
@@ -1162,9 +1226,10 @@ class Application(tk.Tk):
             return
 
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        popup.iconbitmap(self.icon_path)
+        self._apply_window_icon(popup)
         popup.title("")
         popup.geometry("360x320")
+        popup.transient(self)
 
         label = ctk.CTkLabel(
             popup,
@@ -1226,6 +1291,8 @@ class Application(tk.Tk):
         )
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
+        popup.update_idletasks()
+        self._center_window(popup)
 
     def check_duplicate_chapters(self):
         file_path = filedialog.askopenfilename(
@@ -1242,9 +1309,10 @@ class Application(tk.Tk):
             return
 
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        popup.iconbitmap(self.icon_path)
+        self._apply_window_icon(popup)
         popup.title("")
         popup.geometry("450x400")
+        popup.transient(self)
 
         tree = ttk.Treeview(
             popup, columns=("chapters", "preview"), show="headings"
@@ -1282,6 +1350,8 @@ class Application(tk.Tk):
         )
         close_button.pack(side="left")
         self._apply_button_hover_effect(close_button)
+        popup.update_idletasks()
+        self._center_window(popup)
 
     def check_chapter_numbering(self):
         file_path = filedialog.askopenfilename(
@@ -1301,7 +1371,7 @@ class Application(tk.Tk):
         self.show_popup(message, color="#ff0000")
 
     def save_words_to_file(self, words):
-        folder = filedialog.askdirectory(title="Выберите папку для сохранения списка")
+        folder = self._ask_directory(title="Выберите папку для сохранения списка")
         if not folder:
             return
         file_path = os.path.join(folder, "english_words.txt")
@@ -1322,8 +1392,9 @@ class Application(tk.Tk):
             return
 
         dialog = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        dialog.iconbitmap(self.icon_path)
+        self._apply_window_icon(dialog)
         dialog.title("")
+        dialog.transient(self)
 
         # Input fields
         inputs = {}
@@ -1421,8 +1492,9 @@ class Application(tk.Tk):
                 return
 
             popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-            popup.iconbitmap(self.icon_path)
+            self._apply_window_icon(popup)
             popup.title("")
+            popup.transient(self)
             lines = [
                 f"{os.path.basename(path)}: {'успех' if ok else 'ошибка'}"
                 for path, ok in results.items()
@@ -1447,9 +1519,12 @@ class Application(tk.Tk):
                 border_width=0,
                 font=self.custom_font,
                 height=self.button_height,
+                width=self.button_width,
             )
             close_btn.pack(pady=(0, 10))
             self._apply_button_hover_effect(close_btn)
+            popup.update_idletasks()
+            self._center_window(popup)
 
         def cancel():
             dialog.destroy()
@@ -1483,10 +1558,14 @@ class Application(tk.Tk):
         )
         cancel_button.pack(side="left")
         self._apply_button_hover_effect(cancel_button)
+        dialog.update_idletasks()
+        self._center_window(dialog)
+        dialog.grab_set()
+        dialog.protocol("WM_DELETE_WINDOW", cancel)
 
     def ask_questions(self):
         total_dialog = CustomInputDialog(
-            self, "Сколько ебануть?", self.custom_font, self.icon_path
+            self, "Сколько ебануть?", self.custom_font, self.icon_path, self.icon_photo
         )
 
         total_chapters = total_dialog.get_input()
@@ -1499,6 +1578,7 @@ class Application(tk.Tk):
             "На сколько частей делим?",
             self.custom_font,
             self.icon_path,
+            self.icon_photo,
         )
 
         parts_per_chapter = parts_dialog.get_input()
@@ -1548,27 +1628,56 @@ class Application(tk.Tk):
 
     def show_popup(self, message, color="#00ff00"):
         popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
-        popup.iconbitmap(self.icon_path)
+        self._apply_window_icon(popup)
         popup.title("")
-        popup.geometry("300x100")
         popup.transient(self)
         popup.grab_set()
-        self._center_window(popup)
 
         frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
-        frame.pack(fill="both", expand=True)
+        frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-        label = ctk.CTkLabel(
-            frame,
-            text=message,
-            text_color=color,
-            font=ctk.CTkFont(
-                family=self.custom_font.actual("family"),
-                size=self.custom_font.cget("size"),
-                weight="bold",
-            ),
+        message_font = ctk.CTkFont(
+            family=self.custom_font.actual("family"),
+            size=self.custom_font.cget("size"),
+            weight="bold",
         )
-        label.pack(pady=20)
+
+        use_scrollable = len(message) > 400 or message.count("\n") >= 6
+        content_widget: tk.Widget
+
+        if use_scrollable:
+            content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
+            content_container.pack(fill="both", expand=True, pady=(0, 16))
+
+            textbox = ctk.CTkTextbox(
+                content_container,
+                wrap="word",
+                font=message_font,
+                text_color=color,
+                fg_color="#1f1f1f",
+                border_width=0,
+            )
+            textbox.insert("1.0", message)
+            textbox.configure(state="disabled")
+            textbox.pack(side="left", fill="both", expand=True)
+
+            scrollbar = ctk.CTkScrollbar(
+                content_container, command=textbox.yview, fg_color="#2f2f2f"
+            )
+            scrollbar.pack(side="right", fill="y", padx=(8, 0))
+            textbox.configure(yscrollcommand=scrollbar.set)
+            content_widget = textbox
+        else:
+            label = ctk.CTkLabel(
+                frame,
+                text=message,
+                text_color=color,
+                font=message_font,
+                justify="left",
+                anchor="w",
+            )
+            label.pack(fill="both", expand=True, pady=(0, 16))
+            content_widget = label
 
         close_button = ctk.CTkButton(
             frame,
@@ -1581,10 +1690,33 @@ class Application(tk.Tk):
             text_color=self.button_text_color,
             border_width=0,
             font=self.custom_font,
+            width=self.button_width,
+            height=self.button_height,
         )
-        close_button.pack(pady=5)
-        close_button.configure(height=self.button_height)
+        close_button.pack(pady=(0, 4))
         self._apply_button_hover_effect(close_button)
+
+        max_width = min(self.winfo_screenwidth() - 160, 720)
+        min_width = max(self.button_width + 80, 320)
+        max_height = min(self.winfo_screenheight() - 160, 600)
+
+        if isinstance(content_widget, ctk.CTkLabel):
+            content_widget.configure(wraplength=max_width - 80)
+
+        popup.update_idletasks()
+        width = min(max(popup.winfo_reqwidth(), min_width), max_width)
+
+        if isinstance(content_widget, ctk.CTkLabel):
+            content_widget.configure(wraplength=width - 80)
+            popup.update_idletasks()
+
+        height = popup.winfo_reqheight()
+        height = max(height, self.button_height + 140)
+        height = min(height, max_height)
+
+        popup.geometry(f"{width}x{height}")
+        popup.minsize(min(width, min_width), min(height, max_height))
+        self._center_window(popup)
 
     def load_config(self):
         config = {}
