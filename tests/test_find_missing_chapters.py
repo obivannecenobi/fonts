@@ -46,6 +46,17 @@ def test_no_missing_chapters(tmp_path):
     assert issues == {"missing": [], "duplicates": [], "unexpected": []}
 
 
+def test_simple_numbering_respects_last_chapter(tmp_path):
+    doc_path = tmp_path / "simple_range.docx"
+    _create_document(doc_path, ["1500", "1", "3"])
+
+    issues = find_missing_chapters(str(doc_path))
+
+    assert issues["missing"] == ["Глава 2"]
+    assert issues["duplicates"] == []
+    assert issues["unexpected"] == []
+
+
 def test_duplicate_chapters(tmp_path):
     doc_path = tmp_path / "duplicates.docx"
     _create_document(doc_path, ["1", "2", "2", "3"])
@@ -79,4 +90,15 @@ def test_unexpected_minor(tmp_path):
     assert issues["unexpected"] == ["Глава 4.3"]
     assert issues["missing"] == []
     assert issues["duplicates"] == []
+
+
+def test_decimal_numbering_respects_last_chapter(tmp_path):
+    doc_path = tmp_path / "decimal_range.docx"
+    _create_document(doc_path, ["1500.1", "1.1", "1.2", "2.1"])
+
+    issues = find_missing_chapters(str(doc_path))
+
+    assert issues["missing"] == ["Глава 2.2"]
+    assert issues["duplicates"] == []
+    assert issues["unexpected"] == []
 
