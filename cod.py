@@ -317,12 +317,15 @@ def _analyse_simple_numbering(numbers: List[int], results: Dict[str, List[str]])
     if not numbers:
         return
 
-    ordered = sorted(set(numbers))
-    first = ordered[0]
-    last = ordered[-1]
-    existing = set(ordered)
+    start = min(numbers)
+    end = numbers[-1]
 
-    for value in range(first, last + 1):
+    if end < start:
+        start, end = end, start
+
+    existing = {value for value in numbers if start <= value <= end}
+
+    for value in range(start, end + 1):
         if value not in existing:
             _append_unique(results["missing"], _format_chapter_number((value,)))
 
@@ -340,6 +343,23 @@ def _analyse_decimal_numbering(
     if not majors:
         return
 
+    chapter_majors = [major for major, _ in chapters]
+    first_major = min(chapter_majors)
+    last_major = chapter_majors[-1]
+
+    if last_major < first_major:
+        first_major, last_major = last_major, first_major
+
+    filtered_items = [
+        (major, minors)
+        for major, minors in majors.items()
+        if first_major <= major <= last_major
+    ]
+
+    if not filtered_items:
+        return
+
+    majors = OrderedDict(filtered_items)
     total_majors = len(majors)
     minor_frequency: Dict[int, int] = {}
     for minors in majors.values():
@@ -367,11 +387,11 @@ def _analyse_decimal_numbering(
     if not existing_majors:
         return
 
-    first_major = existing_majors[0]
-    last_major = existing_majors[-1]
+    range_start = existing_majors[0]
+    range_end = existing_majors[-1]
     existing_major_set = set(existing_majors)
 
-    for value in range(first_major, last_major + 1):
+    for value in range(range_start, range_end + 1):
         if value not in existing_major_set:
             for minor in expected_minor_list:
                 _append_unique(
