@@ -565,7 +565,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color=fg_color,
             hover_color=hover_color,
             text_color=button_text_color,
-            corner_radius=self.master.entry_corner_radius,
+            corner_radius=button_corner_radius,
             border_width=0,
             font=font,
             width=compact_button_width,
@@ -584,7 +584,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color=fg_color,
             hover_color=hover_color,
             text_color=button_text_color,
-            corner_radius=self.master.entry_corner_radius,
+            corner_radius=button_corner_radius,
             border_width=0,
             font=font,
             width=compact_button_width,
@@ -1021,9 +1021,12 @@ class Application(tk.Tk):
 
         if self.icon_photo is not None:
             try:
-                window.iconphoto(False, self.icon_photo)
+                window.iconphoto(True, self.icon_photo)
             except tk.TclError:
-                pass
+                try:
+                    window.iconphoto(False, self.icon_photo)
+                except tk.TclError:
+                    pass
 
         try:
             window.wm_iconbitmap(str(icon_file))
@@ -1868,11 +1871,17 @@ class Application(tk.Tk):
                 row=0,
                 column=0,
                 sticky="ew",
-                pady=(0, DIALOG_SECTION_GAP),
+                pady=(0, DIALOG_SMALL_GAP),
             )
 
+            button_row = ctk.CTkFrame(result_content, fg_color="#2f2f2f")
+            button_row.grid(row=1, column=0, sticky="ew")
+            button_row.grid_columnconfigure(0, weight=1)
+            button_row.grid_columnconfigure(1, weight=0)
+            button_row.grid_columnconfigure(2, weight=1)
+
             close_btn = ctk.CTkButton(
-                result_content,
+                button_row,
                 text="Закрыть",
                 command=popup.destroy,
                 corner_radius=self.button_corner_radius,
@@ -1883,9 +1892,9 @@ class Application(tk.Tk):
                 border_width=0,
                 font=self.custom_font,
                 height=self.button_height,
-                width=self.button_width,
+                width=max(self.button_width // 2, int(self.button_height * 2.5), 160),
             )
-            close_btn.grid(row=1, column=0, sticky="ew")
+            close_btn.grid(row=0, column=1, pady=(DIALOG_SMALL_GAP, 0))
             self._apply_button_hover_effect(close_btn)
             self._finalize_dialog_window(popup, min_width=360, relative_to=self)
 
@@ -2030,7 +2039,7 @@ class Application(tk.Tk):
                 row=0,
                 column=0,
                 sticky="nsew",
-                pady=(0, DIALOG_SECTION_GAP),
+                pady=(0, DIALOG_SMALL_GAP),
             )
             content_container.grid_columnconfigure(0, weight=1)
             content_container.grid_rowconfigure(0, weight=1)
@@ -2066,7 +2075,7 @@ class Application(tk.Tk):
                 row=0,
                 column=0,
                 sticky="nsew",
-                pady=(0, DIALOG_SECTION_GAP),
+                pady=(0, DIALOG_SMALL_GAP),
             )
             content_container.grid_rowconfigure(0, weight=1)
             content_container.grid_columnconfigure(0, weight=1)
@@ -2079,13 +2088,7 @@ class Application(tk.Tk):
                 justify="center",
                 anchor="center",
             )
-            label.grid(
-                row=0,
-                column=0,
-                sticky="nsew",
-                padx=DIALOG_SECTION_GAP,
-                pady=(0, 0),
-            )
+            label.grid(row=0, column=0, sticky="nsew", padx=DIALOG_SECTION_GAP)
             content_widget = label
 
         compact_button_width = max(
@@ -2093,11 +2096,17 @@ class Application(tk.Tk):
             int(self.button_height * 2.5),
             160,
         )
+        button_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
+        button_container.grid(row=1, column=0, sticky="ew", pady=(DIALOG_SMALL_GAP, 0))
+        button_container.grid_columnconfigure(0, weight=1)
+        button_container.grid_columnconfigure(1, weight=0)
+        button_container.grid_columnconfigure(2, weight=1)
+
         close_button = ctk.CTkButton(
-            frame,
+            button_container,
             text="Закрыть",
             command=popup.destroy,
-            corner_radius=self.entry_corner_radius,
+            corner_radius=self.button_corner_radius,
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
@@ -2107,13 +2116,7 @@ class Application(tk.Tk):
             width=compact_button_width,
             height=self.button_height,
         )
-        close_button.grid(
-            row=1,
-            column=0,
-            padx=DIALOG_SECTION_GAP,
-            pady=(DIALOG_SECTION_GAP, 0),
-            sticky="ew",
-        )
+        close_button.grid(row=0, column=1)
         self._apply_button_hover_effect(close_button)
 
         # ограничим перенос текста, потом отдадим размер менеджеру геометрии
