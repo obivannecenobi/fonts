@@ -27,6 +27,8 @@ from PIL import Image, ImageTk
 
 from rulate_uploader import upload_chapters
 
+UI_RADIUS = 18  # единый радиус для всех кнопок и полей в диалогах
+
 
 def split_document(
     file_path: str,
@@ -563,8 +565,8 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color=fg_color,
             hover_color=hover_color,
             text_color=button_text_color,
-            corner_radius=button_corner_radius,
-            border_width=border_width,
+            corner_radius=self.master.entry_corner_radius,
+            border_width=0,
             font=font,
             width=compact_button_width,
         )
@@ -582,8 +584,8 @@ class CustomInputDialog(ctk.CTkToplevel):
             fg_color=fg_color,
             hover_color=hover_color,
             text_color=button_text_color,
-            corner_radius=button_corner_radius,
-            border_width=border_width,
+            corner_radius=self.master.entry_corner_radius,
+            border_width=0,
             font=font,
             width=compact_button_width,
         )
@@ -707,8 +709,8 @@ class Application(tk.Tk):
         self.button_border_color = "#ffffff"
         self.button_border_width = 0
         self.button_hover_border_width = 0
-        self.button_corner_radius = 20
-        self.entry_corner_radius = 20
+        self.button_corner_radius = UI_RADIUS
+        self.entry_corner_radius = UI_RADIUS
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
 
@@ -962,26 +964,8 @@ class Application(tk.Tk):
         self.header_label = main_label
 
     def _select_icon_file(self) -> str:
-        base_dir = Path(__file__).resolve().parent
-        primary_icon = base_dir / "assets" / "icons" / "app.ico"
-        if primary_icon.exists():
-            return str(primary_icon)
-
-        legacy_candidates = [
-            base_dir / "app_icon.ico",
-        ]
-
-        icons_dir = base_dir / "icons"
-        if icons_dir.is_dir():
-            legacy_candidates.extend(sorted(icons_dir.glob("*.ico")))
-            legacy_candidates.extend(sorted(icons_dir.glob("*.png")))
-            legacy_candidates.extend(sorted(icons_dir.glob("*.gif")))
-
-        for candidate in legacy_candidates:
-            if candidate.exists():
-                return str(candidate)
-
-        return str(primary_icon)
+        path = Path(__file__).resolve().parent / "assets" / "icons" / "app.ico"
+        return str(path) if path.exists() else ""
 
     def _load_icon_photo(self, path: str) -> tk.PhotoImage | None:
         try:
@@ -1914,7 +1898,7 @@ class Application(tk.Tk):
             button_frame,
             text="Ок",
             command=submit,
-            corner_radius=max(self.button_corner_radius, self.button_height),
+            corner_radius=self.entry_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             text_color=self.button_text_color,
@@ -1935,7 +1919,7 @@ class Application(tk.Tk):
             button_frame,
             text="Отмена",
             command=cancel,
-            corner_radius=max(self.button_corner_radius, self.button_height),
+            corner_radius=self.entry_corner_radius,
             fg_color="#313131",
             hover_color="#3e3e3e",
             text_color=self.button_text_color,
@@ -2109,15 +2093,11 @@ class Application(tk.Tk):
             int(self.button_height * 2.5),
             160,
         )
-        compact_corner_radius = max(
-            self.button_corner_radius,
-            (self.button_height // 2) + 12,
-        )
         close_button = ctk.CTkButton(
             frame,
             text="Закрыть",
             command=popup.destroy,
-            corner_radius=compact_corner_radius,
+            corner_radius=self.entry_corner_radius,
             bg_color="#2f2f2f",
             fg_color="#313131",
             hover_color="#3e3e3e",
@@ -2136,35 +2116,14 @@ class Application(tk.Tk):
         )
         self._apply_button_hover_effect(close_button)
 
+        # ограничим перенос текста, потом отдадим размер менеджеру геометрии
         max_width = min(self.winfo_screenwidth() - 160, 720)
-        min_width = max(self.button_width + 80, 320)
-        max_height = min(self.winfo_screenheight() - 160, 600)
-
         if isinstance(content_widget, ctk.CTkLabel):
             content_widget.configure(wraplength=max_width - 80)
-
-        popup.update_idletasks()
-        width = min(max(popup.winfo_reqwidth(), min_width), max_width)
-
-        if isinstance(content_widget, ctk.CTkLabel):
-            content_widget.configure(wraplength=width - 80)
             popup.update_idletasks()
 
-        try:
-            content_height = content_widget.winfo_reqheight()
-        except tk.TclError:
-            content_height = 0
-
-        close_button.update_idletasks()
-        button_height = close_button.winfo_reqheight()
-
-        height = popup.winfo_reqheight()
-        minimum_height = content_height + button_height + 48
-        height = min(max(height, minimum_height), max_height)
-
-        popup.geometry(f"{width}x{height}")
-        popup.minsize(min(width, min_width), min(height, max_height))
-        self._center_window(popup, relative_to=self)
+        # никаких ручных minsize/geometry — берём запрошенный размер и центрируем
+        self._finalize_dialog_window(popup, relative_to=self)
 
     def load_config(self):
         config = {}
