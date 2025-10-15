@@ -11,6 +11,7 @@ import sys
 import time
 import re
 import tkinter as tk
+from collections import Counter, OrderedDict
 from pathlib import Path
 from tkinter import filedialog, ttk
 from tkinter import font as tkfont
@@ -256,8 +257,8 @@ def _format_chapter_number(parts: Tuple[int, ...]) -> str:
     return f"Глава {parts[0]}.{parts[1]}"
 
 
-def find_missing_chapters(file_path: str) -> List[str]:
-    """Return the list of missing chapter headings in a DOCX document."""
+def find_missing_chapters(file_path: str) -> Dict[str, List[str]]:
+    """Return information about numbering problems detected in a DOCX document."""
 
     document = Document(file_path)
     heading_pattern = re.compile(r"^Глава\s+(\d+(?:\.\d+)?)", re.IGNORECASE)
@@ -269,79 +270,127 @@ def find_missing_chapters(file_path: str) -> List[str]:
         if match:
             raw_numbers.append(match.group(1))
 
+    results: Dict[str, List[str]] = {"missing": [], "duplicates": [], "unexpected": []}
+
     if not raw_numbers:
-        return []
+        return results
 
-    contains_decimal = any("." in value for value in raw_numbers)
-
-    if not contains_decimal:
-        numbers = [int(value) for value in raw_numbers]
-        missing: List[str] = []
-        expected = numbers[0]
-
-        for current in numbers:
-            while expected < current:
-                missing.append(_format_chapter_number((expected,)))
-                expected += 1
-            expected = current + 1
-
-        return missing
-
-    chapters: List[Tuple[int, int]] = []
+    counts = Counter(raw_numbers)
+    seen_duplicates: set[str] = set()
     for value in raw_numbers:
-        parts = value.split(".")
-        if len(parts) != 2:
-            continue
-        chapters.append((int(parts[0]), int(parts[1])))
+        if counts[value] > 1 and value not in seen_duplicates:
+            results["duplicates"].append(f"Глава {value}")
+            seen_duplicates.add(value)
 
+    integers: List[int] = []
+    decimals: List[Tuple[int, int]] = []
+
+    for value in raw_numbers:
+        if "." in value:
+            parts = value.split(".")
+            if len(parts) != 2:
+                continue
+            try:
+                decimals.append((int(parts[0]), int(parts[1])))
+            except ValueError:
+                continue
+        else:
+            try:
+                integers.append(int(value))
+            except ValueError:
+                continue
+
+    if decimals:
+        _analyse_decimal_numbering(decimals, results)
+    elif integers:
+        _analyse_simple_numbering(integers, results)
+
+    return results
+
+
+def _append_unique(target: List[str], value: str) -> None:
+    if value not in target:
+        target.append(value)
+
+
+def _analyse_simple_numbering(numbers: List[int], results: Dict[str, List[str]]) -> None:
+    if not numbers:
+        return
+
+    ordered = sorted(set(numbers))
+    first = ordered[0]
+    last = ordered[-1]
+    existing = set(ordered)
+
+    for value in range(first, last + 1):
+        if value not in existing:
+            _append_unique(results["missing"], _format_chapter_number((value,)))
+
+
+def _analyse_decimal_numbering(
+    chapters: List[Tuple[int, int]], results: Dict[str, List[str]]
+) -> None:
     if not chapters:
-        return []
+        return
 
-    missing: List[str] = []
-    major_order: List[int] = []
-    majors: Dict[int, List[int]] = {}
-
+    majors: OrderedDict[int, List[int]] = OrderedDict()
     for major, minor in chapters:
-        if major not in majors:
-            majors[major] = []
-            major_order.append(major)
-        majors[major].append(minor)
+        majors.setdefault(major, []).append(minor)
 
-    prev_major: int | None = None
-    prev_max_minor: int | None = None
+    if not majors:
+        return
 
-    for major in major_order:
-        if prev_major is not None and major - prev_major > 1:
-            limit = prev_max_minor if prev_max_minor is not None else 1
-            limit = max(limit, 1)
-            for gap_major in range(prev_major + 1, major):
-                for minor in range(1, limit + 1):
-                    missing.append(_format_chapter_number((gap_major, minor)))
+    total_majors = len(majors)
+    minor_frequency: Dict[int, int] = {}
+    for minors in majors.values():
+        for minor in set(minors):
+            minor_frequency[minor] = minor_frequency.get(minor, 0) + 1
 
-        ordered_minors = list(dict.fromkeys(majors[major]))
-        ordered_minors.sort()
+    threshold = max(1, (total_majors + 1) // 2)
+    baseline_minors: set[int] = set()
+    for minors in majors.values():
+        baseline_minors = set(minors)
+        break
 
-        expected_minor = 1
-        for minor in ordered_minors:
-            while expected_minor < minor:
-                missing.append(_format_chapter_number((major, expected_minor)))
-                expected_minor += 1
-            expected_minor = minor + 1
+    expected_minors = baseline_minors.union(
+        minor
+        for minor, frequency in minor_frequency.items()
+        if frequency >= threshold
+    )
 
-        current_max_minor = ordered_minors[-1] if ordered_minors else 0
-        original_max_minor = current_max_minor
+    if not expected_minors and minor_frequency:
+        expected_minors = {min(minor_frequency.keys())}
 
-        if prev_max_minor is not None and current_max_minor < prev_max_minor:
-            for value in range(current_max_minor + 1, prev_max_minor + 1):
-                missing.append(_format_chapter_number((major, value)))
+    expected_minor_list = sorted(expected_minors)
 
-        prev_major = major
-        if original_max_minor:
-            prev_max_minor = original_max_minor
-        elif prev_max_minor is None:
-            prev_max_minor = 1
+    existing_majors = sorted(majors.keys())
+    if not existing_majors:
+        return
 
-    return missing
+    first_major = existing_majors[0]
+    last_major = existing_majors[-1]
+    existing_major_set = set(existing_majors)
+
+    for value in range(first_major, last_major + 1):
+        if value not in existing_major_set:
+            for minor in expected_minor_list:
+                _append_unique(
+                    results["missing"], _format_chapter_number((value, minor))
+                )
+
+    for major in existing_majors:
+        unique_minors = sorted(set(majors[major]))
+        for minor in expected_minor_list:
+            if minor not in unique_minors:
+                _append_unique(
+                    results["missing"], _format_chapter_number((major, minor))
+                )
+
+        for minor in unique_minors:
+            if minor not in expected_minor_list:
+                _append_unique(
+                    results["unexpected"], _format_chapter_number((major, minor))
+                )
 
 
 _W_NS = nsmap["w"]
@@ -1667,13 +1716,27 @@ class Application(tk.Tk):
         if not file_path:
             return
 
-        missing = find_missing_chapters(file_path)
+        issues = find_missing_chapters(file_path)
 
-        if not missing:
+        if not any(issues.values()):
             self.show_popup("Все ровно!")
             return
 
-        message = "Отсутствуют следующие главы:\n" + "\n".join(missing)
+        parts: List[str] = []
+        if issues["missing"]:
+            parts.append(
+                "Отсутствуют следующие главы:\n" + "\n".join(issues["missing"])
+            )
+        if issues["duplicates"]:
+            parts.append(
+                "Повторяются следующие главы:\n" + "\n".join(issues["duplicates"])
+            )
+        if issues["unexpected"]:
+            parts.append(
+                "Неожиданная нумерация:\n" + "\n".join(issues["unexpected"])
+            )
+
+        message = "\n\n".join(parts)
         self.show_popup(message, color="#ff0000")
 
     def save_words_to_file(self, words):
