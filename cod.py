@@ -468,6 +468,13 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), "window.cfg")
 
 GEOMETRY_RE = re.compile(r"(\d+)x(\d+)\+(-?\d+)\+(-?\d+)")
 
+DIALOG_PAD_X = 16
+DIALOG_PAD_Y = 14
+DIALOG_SECTION_GAP = 12
+DIALOG_SMALL_GAP = 8
+DIALOG_SCROLLBAR_GAP = 8
+DIALOG_BUTTON_GAP = 12
+
 class CustomInputDialog(ctk.CTkToplevel):
     """Simple dialog asking the user for a single line of text."""
 
@@ -489,13 +496,23 @@ class CustomInputDialog(ctk.CTkToplevel):
         self.result = None
 
         content = ctk.CTkFrame(self, fg_color="#2f2f2f")
-        content.pack(fill="both", expand=True, padx=16, pady=16)
+        content.pack(
+            fill="both",
+            expand=True,
+            padx=DIALOG_PAD_X,
+            pady=DIALOG_PAD_Y,
+        )
         content.grid_columnconfigure(0, weight=1)
 
         self._label = ctk.CTkLabel(
             content, text=question, text_color="#eeeeee", font=font, justify="left"
         )
-        self._label.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        self._label.grid(
+            row=0,
+            column=0,
+            sticky="ew",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
 
         border_width = getattr(master, "button_border_width", 1)
         entry_border_width = getattr(master, "entry_border_width", 0)
@@ -511,14 +528,19 @@ class CustomInputDialog(ctk.CTkToplevel):
             border_width=entry_border_width,
             font=font,
         )
-        self._entry.grid(row=1, column=0, sticky="ew", pady=(0, 12))
+        self._entry.grid(
+            row=1,
+            column=0,
+            sticky="ew",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
 
         entry_height = getattr(master, "entry_height", None)
         if entry_height:
             self._entry.configure(height=entry_height)
 
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
-        button_frame.grid(row=2, column=0, sticky="ew", pady=(0, 0))
+        button_frame.grid(row=2, column=0, sticky="ew")
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
 
@@ -546,7 +568,12 @@ class CustomInputDialog(ctk.CTkToplevel):
             font=font,
             width=compact_button_width,
         )
-        self._ok_button.grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        self._ok_button.grid(
+            row=0,
+            column=0,
+            sticky="ew",
+            padx=(0, DIALOG_BUTTON_GAP),
+        )
 
         self._cancel_button = ctk.CTkButton(
             button_frame,
@@ -560,7 +587,12 @@ class CustomInputDialog(ctk.CTkToplevel):
             font=font,
             width=compact_button_width,
         )
-        self._cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
+        self._cancel_button.grid(
+            row=0,
+            column=1,
+            sticky="ew",
+            padx=(DIALOG_BUTTON_GAP, 0),
+        )
 
         button_height = getattr(master, "button_height", None)
         if button_height:
@@ -931,23 +963,25 @@ class Application(tk.Tk):
 
     def _select_icon_file(self) -> str:
         base_dir = Path(__file__).resolve().parent
+        primary_icon = base_dir / "assets" / "icons" / "app.ico"
+        if primary_icon.exists():
+            return str(primary_icon)
+
+        legacy_candidates = [
+            base_dir / "app_icon.ico",
+        ]
+
         icons_dir = base_dir / "icons"
-        candidates: list[Path] = []
-
         if icons_dir.is_dir():
-            for pattern in ("*.ico", "*.png", "*.gif"):
-                for candidate in sorted(icons_dir.glob(pattern)):
-                    candidates.append(candidate)
+            legacy_candidates.extend(sorted(icons_dir.glob("*.ico")))
+            legacy_candidates.extend(sorted(icons_dir.glob("*.png")))
+            legacy_candidates.extend(sorted(icons_dir.glob("*.gif")))
 
-        fallback = base_dir / "app_icon.ico"
-        if fallback not in candidates:
-            candidates.append(fallback)
-
-        for candidate in candidates:
+        for candidate in legacy_candidates:
             if candidate.exists():
                 return str(candidate)
 
-        return str(fallback)
+        return str(primary_icon)
 
     def _load_icon_photo(self, path: str) -> tk.PhotoImage | None:
         try:
@@ -1312,7 +1346,12 @@ class Application(tk.Tk):
         popup.transient(self)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        content.pack(fill="both", expand=True, padx=16, pady=16)
+        content.pack(
+            fill="both",
+            expand=True,
+            padx=DIALOG_PAD_X,
+            pady=DIALOG_PAD_Y,
+        )
         content.grid_rowconfigure(1, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
@@ -1324,7 +1363,12 @@ class Application(tk.Tk):
             anchor="w",
             justify="left",
         )
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        header.grid(
+            row=0,
+            column=0,
+            sticky="ew",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
 
         tree = ttk.Treeview(
             content, columns=("word", "paragraph"), show="headings"
@@ -1338,14 +1382,27 @@ class Application(tk.Tk):
             paragraphs = ", ".join(str(p) for p, _ in positions)
             tree.insert("", "end", values=(word, paragraphs))
 
-        tree.grid(row=1, column=0, sticky="nsew", pady=(0, 12))
+        tree.grid(
+            row=1,
+            column=0,
+            sticky="nsew",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
 
         tree_scrollbar = ttk.Scrollbar(content, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=tree_scrollbar.set)
-        tree_scrollbar.grid(row=1, column=1, sticky="ns", pady=(0, 12), padx=(8, 0))
+        tree_scrollbar.grid(
+            row=1,
+            column=1,
+            sticky="ns",
+            pady=(0, DIALOG_SECTION_GAP),
+            padx=(DIALOG_SCROLLBAR_GAP, 0),
+        )
 
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
-        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew")
+        button_frame.grid_columnconfigure(0, weight=0)
+        button_frame.grid_columnconfigure(1, weight=1)
 
         if len(words_with_pos) > 50:
             save_button = ctk.CTkButton(
@@ -1361,7 +1418,12 @@ class Application(tk.Tk):
                 font=self.custom_font,
                 height=self.button_height,
             )
-            save_button.pack(side="left", padx=(0, 10))
+            save_button.grid(
+                row=0,
+                column=0,
+                sticky="w",
+                padx=(0, DIALOG_BUTTON_GAP),
+            )
             self._apply_button_hover_effect(save_button)
 
         close_button = ctk.CTkButton(
@@ -1377,10 +1439,13 @@ class Application(tk.Tk):
             font=self.custom_font,
             height=self.button_height,
         )
-        close_button.pack(side="left")
+        close_button.grid(row=0, column=1, sticky="e")
         self._apply_button_hover_effect(close_button)
         self._finalize_dialog_window(
-            popup, min_width=420, min_height=360, relative_to=self
+            popup,
+            min_width=420,
+            min_height=360,
+            relative_to=self,
         )
 
     def find_formatted_separators(self):
@@ -1405,7 +1470,12 @@ class Application(tk.Tk):
         popup.transient(self)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        content.pack(fill="both", expand=True, padx=16, pady=16)
+        content.pack(
+            fill="both",
+            expand=True,
+            padx=DIALOG_PAD_X,
+            pady=DIALOG_PAD_Y,
+        )
         content.grid_rowconfigure(1, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
@@ -1417,7 +1487,12 @@ class Application(tk.Tk):
             anchor="w",
             justify="left",
         )
-        label.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        label.grid(
+            row=0,
+            column=0,
+            sticky="ew",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
 
         tree = ttk.Treeview(content, columns=("paragraph",), show="headings")
         tree.heading("paragraph", text="№ параграфа")
@@ -1426,13 +1501,26 @@ class Application(tk.Tk):
         for index, _ in separators:
             tree.insert("", "end", values=(index,))
 
-        tree.grid(row=1, column=0, sticky="nsew", pady=(0, 12))
+        tree.grid(
+            row=1,
+            column=0,
+            sticky="nsew",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
         tree_scrollbar = ttk.Scrollbar(content, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=tree_scrollbar.set)
-        tree_scrollbar.grid(row=1, column=1, sticky="ns", padx=(8, 0), pady=(0, 12))
+        tree_scrollbar.grid(
+            row=1,
+            column=1,
+            sticky="ns",
+            padx=(DIALOG_SCROLLBAR_GAP, 0),
+            pady=(0, DIALOG_SECTION_GAP),
+        )
 
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
-        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew")
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
 
         def fix():
             for _, paragraph in separators:
@@ -1456,7 +1544,12 @@ class Application(tk.Tk):
             font=self.custom_font,
             height=self.button_height,
         )
-        fix_button.pack(side="left", padx=(0, 10))
+        fix_button.grid(
+            row=0,
+            column=0,
+            sticky="ew",
+            padx=(0, DIALOG_BUTTON_GAP),
+        )
         self._apply_button_hover_effect(fix_button)
 
         close_button = ctk.CTkButton(
@@ -1472,7 +1565,7 @@ class Application(tk.Tk):
             font=self.custom_font,
             height=self.button_height,
         )
-        close_button.pack(side="left")
+        close_button.grid(row=0, column=1, sticky="ew")
         self._apply_button_hover_effect(close_button)
         self._finalize_dialog_window(
             popup, min_width=360, min_height=320, relative_to=self
@@ -1499,7 +1592,12 @@ class Application(tk.Tk):
         popup.transient(self)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        content.pack(fill="both", expand=True, padx=16, pady=16)
+        content.pack(
+            fill="both",
+            expand=True,
+            padx=DIALOG_PAD_X,
+            pady=DIALOG_PAD_Y,
+        )
         content.grid_rowconfigure(1, weight=1)
         content.grid_columnconfigure(0, weight=1)
 
@@ -1511,7 +1609,12 @@ class Application(tk.Tk):
             anchor="w",
             justify="left",
         )
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        header.grid(
+            row=0,
+            column=0,
+            sticky="ew",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
 
         tree = ttk.Treeview(
             content, columns=("chapters", "preview"), show="headings"
@@ -1529,13 +1632,25 @@ class Application(tk.Tk):
                 snippet = "(пусто)"
             tree.insert("", "end", values=(", ".join(titles), snippet))
 
-        tree.grid(row=1, column=0, sticky="nsew", pady=(0, 12))
+        tree.grid(
+            row=1,
+            column=0,
+            sticky="nsew",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
         tree_scrollbar = ttk.Scrollbar(content, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=tree_scrollbar.set)
-        tree_scrollbar.grid(row=1, column=1, sticky="ns", padx=(8, 0), pady=(0, 12))
+        tree_scrollbar.grid(
+            row=1,
+            column=1,
+            sticky="ns",
+            padx=(DIALOG_SCROLLBAR_GAP, 0),
+            pady=(0, DIALOG_SECTION_GAP),
+        )
 
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
-        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew")
+        button_frame.grid_columnconfigure(0, weight=1)
 
         close_button = ctk.CTkButton(
             button_frame,
@@ -1550,7 +1665,7 @@ class Application(tk.Tk):
             font=self.custom_font,
             height=self.button_height,
         )
-        close_button.pack(side="left")
+        close_button.grid(row=0, column=0, sticky="ew")
         self._apply_button_hover_effect(close_button)
         self._finalize_dialog_window(
             popup, min_width=450, min_height=380, relative_to=self
@@ -1600,9 +1715,16 @@ class Application(tk.Tk):
         self._apply_window_icon(dialog)
         dialog.title("")
         dialog.transient(self)
+        content = ctk.CTkFrame(dialog, fg_color="#2f2f2f")
+        content.pack(
+            fill="both",
+            expand=True,
+            padx=DIALOG_PAD_X,
+            pady=DIALOG_PAD_Y,
+        )
+        content.grid_columnconfigure(0, weight=1)
 
-        # Input fields
-        inputs = {}
+        inputs: dict[str, ctk.CTkEntry] = {}
         fields = [
             ("URL книги", "book_url", False),
             ("Логин", "username", False),
@@ -1610,11 +1732,26 @@ class Application(tk.Tk):
             ("Том", "volume", False),
             ("Дата/время публикации", "publish_at", False),
         ]
+
+        current_row = 0
         for label_text, key, is_password in fields:
-            label = ctk.CTkLabel(dialog, text=label_text, text_color="#eeeeee", font=self.custom_font)
-            label.pack(padx=10, pady=(10, 0), anchor="w")
+            label = ctk.CTkLabel(
+                content,
+                text=label_text,
+                text_color="#eeeeee",
+                font=self.custom_font,
+                anchor="w",
+            )
+            label.grid(
+                row=current_row,
+                column=0,
+                sticky="ew",
+                pady=(0, DIALOG_SMALL_GAP),
+            )
+            current_row += 1
+
             entry = ctk.CTkEntry(
-                dialog,
+                content,
                 show="*" if is_password else None,
                 fg_color="#ffffff",
                 border_color="#2f2f2f",
@@ -1624,16 +1761,22 @@ class Application(tk.Tk):
                 font=self.custom_font,
                 height=self.entry_height,
             )
-            entry.pack(fill=tk.X, padx=10, pady=(0, 10))
+            entry.grid(
+                row=current_row,
+                column=0,
+                sticky="ew",
+                pady=(0, DIALOG_SECTION_GAP),
+            )
+            current_row += 1
 
-            # Enable clipboard operations
             entry.bind("<Control-v>", lambda e: e.widget.event_generate("<<Paste>>"))
             entry.bind("<Control-V>", lambda e: e.widget.event_generate("<<Paste>>"))
 
             def _show_menu(event, widget=entry):
                 menu = tk.Menu(widget, tearoff=0)
                 menu.add_command(
-                    label="Вставить", command=lambda: widget.event_generate("<<Paste>>")
+                    label="Вставить",
+                    command=lambda: widget.event_generate("<<Paste>>"),
                 )
                 menu.tk_popup(event.x_root, event.y_root)
 
@@ -1642,8 +1785,9 @@ class Application(tk.Tk):
 
         deferred_var = tk.BooleanVar()
         subscription_var = tk.BooleanVar()
+
         deferred_cb = ctk.CTkCheckBox(
-            dialog,
+            content,
             text="Отложенная публикация",
             variable=deferred_var,
             text_color="#eeeeee",
@@ -1652,10 +1796,16 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
         )
-        deferred_cb.pack(padx=10, pady=(0, 5), anchor="w")
+        deferred_cb.grid(
+            row=current_row,
+            column=0,
+            sticky="w",
+            pady=(0, DIALOG_SMALL_GAP),
+        )
+        current_row += 1
 
         subscription_cb = ctk.CTkCheckBox(
-            dialog,
+            content,
             text="Подписка",
             variable=subscription_var,
             text_color="#eeeeee",
@@ -1664,10 +1814,18 @@ class Application(tk.Tk):
             border_width=0,
             font=self.custom_font,
         )
-        subscription_cb.pack(padx=10, pady=(0, 10), anchor="w")
+        subscription_cb.grid(
+            row=current_row,
+            column=0,
+            sticky="w",
+            pady=(0, DIALOG_SECTION_GAP),
+        )
+        current_row += 1
 
-        button_frame = ctk.CTkFrame(dialog, fg_color="#2f2f2f")
-        button_frame.pack(pady=(0, 10))
+        button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
+        button_frame.grid(row=current_row, column=0, sticky="ew")
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
 
         def submit():
             book_url = inputs["book_url"].get().strip()
@@ -1705,21 +1863,32 @@ class Application(tk.Tk):
                 for path, ok in results.items()
             ]
 
-            content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-            content.pack(fill="both", expand=True, padx=16, pady=16)
+            result_content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+            result_content.pack(
+                fill="both",
+                expand=True,
+                padx=DIALOG_PAD_X,
+                pady=DIALOG_PAD_Y,
+            )
+            result_content.grid_columnconfigure(0, weight=1)
 
             label = ctk.CTkLabel(
-                content,
+                result_content,
                 text="\n".join(lines) or "Нет результатов",
                 text_color="#eeeeee",
                 justify="left",
                 font=self.custom_font,
                 anchor="w",
             )
-            label.pack(fill="both", expand=True, pady=(0, 12))
+            label.grid(
+                row=0,
+                column=0,
+                sticky="ew",
+                pady=(0, DIALOG_SECTION_GAP),
+            )
 
             close_btn = ctk.CTkButton(
-                content,
+                result_content,
                 text="Закрыть",
                 command=popup.destroy,
                 corner_radius=self.button_corner_radius,
@@ -1732,7 +1901,7 @@ class Application(tk.Tk):
                 height=self.button_height,
                 width=self.button_width,
             )
-            close_btn.pack()
+            close_btn.grid(row=1, column=0, sticky="ew")
             self._apply_button_hover_effect(close_btn)
             self._finalize_dialog_window(popup, min_width=360, relative_to=self)
 
@@ -1754,7 +1923,12 @@ class Application(tk.Tk):
             height=self.button_height,
             width=compact_button_width,
         )
-        ok_button.pack(side="left", padx=(0, 10))
+        ok_button.grid(
+            row=0,
+            column=0,
+            sticky="ew",
+            padx=(0, DIALOG_BUTTON_GAP),
+        )
         self._apply_button_hover_effect(ok_button)
 
         cancel_button = ctk.CTkButton(
@@ -1770,10 +1944,9 @@ class Application(tk.Tk):
             height=self.button_height,
             width=compact_button_width,
         )
-        cancel_button.pack(side="left")
+        cancel_button.grid(row=0, column=1, sticky="ew")
         self._apply_button_hover_effect(cancel_button)
-        dialog.update_idletasks()
-        self._center_window(dialog, relative_to=self)
+        self._finalize_dialog_window(dialog, relative_to=self)
         dialog.grab_set()
         dialog.protocol("WM_DELETE_WINDOW", cancel)
 
@@ -1848,7 +2021,12 @@ class Application(tk.Tk):
         popup.grab_set()
 
         frame = ctk.CTkFrame(popup, corner_radius=12, fg_color="#2f2f2f")
-        frame.pack(fill="both", expand=True, padx=16, pady=16)
+        frame.pack(
+            fill="both",
+            expand=True,
+            padx=DIALOG_PAD_X,
+            pady=DIALOG_PAD_Y,
+        )
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
         frame.grid_rowconfigure(1, weight=0)
@@ -1864,7 +2042,12 @@ class Application(tk.Tk):
 
         if use_scrollable:
             content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
-            content_container.grid(row=0, column=0, sticky="nsew", pady=(12, 12))
+            content_container.grid(
+                row=0,
+                column=0,
+                sticky="nsew",
+                pady=(0, DIALOG_SECTION_GAP),
+            )
             content_container.grid_columnconfigure(0, weight=1)
             content_container.grid_rowconfigure(0, weight=1)
 
@@ -1881,14 +2064,26 @@ class Application(tk.Tk):
             textbox.grid(row=0, column=0, sticky="nsew")
 
             scrollbar = ctk.CTkScrollbar(
-                content_container, command=textbox.yview, fg_color="#2f2f2f"
+                content_container,
+                command=textbox.yview,
+                fg_color="#2f2f2f",
             )
-            scrollbar.grid(row=0, column=1, sticky="ns", padx=(8, 0))
+            scrollbar.grid(
+                row=0,
+                column=1,
+                sticky="ns",
+                padx=(DIALOG_SCROLLBAR_GAP, 0),
+            )
             textbox.configure(yscrollcommand=scrollbar.set)
             content_widget = textbox
         else:
             content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
-            content_container.grid(row=0, column=0, sticky="nsew", pady=(12, 12))
+            content_container.grid(
+                row=0,
+                column=0,
+                sticky="nsew",
+                pady=(0, DIALOG_SECTION_GAP),
+            )
             content_container.grid_rowconfigure(0, weight=1)
             content_container.grid_columnconfigure(0, weight=1)
 
@@ -1900,7 +2095,13 @@ class Application(tk.Tk):
                 justify="center",
                 anchor="center",
             )
-            label.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
+            label.grid(
+                row=0,
+                column=0,
+                sticky="nsew",
+                padx=DIALOG_SECTION_GAP,
+                pady=(0, 0),
+            )
             content_widget = label
 
         compact_button_width = max(
@@ -1926,7 +2127,13 @@ class Application(tk.Tk):
             width=compact_button_width,
             height=self.button_height,
         )
-        close_button.grid(row=1, column=0, padx=12, pady=(8, 4), sticky="ew")
+        close_button.grid(
+            row=1,
+            column=0,
+            padx=DIALOG_SECTION_GAP,
+            pady=(DIALOG_SECTION_GAP, 0),
+            sticky="ew",
+        )
         self._apply_button_hover_effect(close_button)
 
         max_width = min(self.winfo_screenwidth() - 160, 720)
