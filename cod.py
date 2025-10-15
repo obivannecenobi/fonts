@@ -569,7 +569,7 @@ class CustomInputDialog(ctk.CTkToplevel):
         content = ctk.CTkFrame(self, fg_color="#2f2f2f")
         content.pack(
             fill="both",
-            expand=True,
+            expand=False,
             padx=DIALOG_PAD_X,
             pady=DIALOG_PAD_Y,
         )
@@ -610,6 +610,14 @@ class CustomInputDialog(ctk.CTkToplevel):
         if entry_height:
             self._entry.configure(height=entry_height)
 
+        try:
+            entry_corner_radius = int(self._entry.cget("corner_radius"))
+        except (TypeError, ValueError):
+            entry_corner_radius = getattr(master, "entry_corner_radius", 12)
+
+        master_entry_radius = getattr(master, "entry_corner_radius", entry_corner_radius)
+        entry_corner_radius = max(entry_corner_radius, master_entry_radius)
+
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
         button_frame.grid(row=2, column=0, sticky="ew")
         button_frame.grid_columnconfigure(0, weight=1)
@@ -624,8 +632,10 @@ class CustomInputDialog(ctk.CTkToplevel):
             int(base_button_height * 2.2),
             110,
         )
-        entry_corner_radius = getattr(master, "entry_corner_radius", 12)
-        button_corner_radius = getattr(master, "button_corner_radius", entry_corner_radius)
+        button_corner_radius = max(
+            entry_corner_radius,
+            getattr(master, "button_corner_radius", entry_corner_radius),
+        )
 
         self._ok_button = ctk.CTkButton(
             button_frame,
