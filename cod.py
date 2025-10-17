@@ -6,6 +6,7 @@ directory so the font file must be available on disk.
 
 import ctypes
 import json
+import math
 import os
 import sys
 import time
@@ -2123,6 +2124,37 @@ class Application(tk.Tk):
             weight="bold",
         )
 
+        compact_button_width = max(
+            min(self.button_width, 280),
+            int(self.button_height * 2.5),
+            160,
+        )
+
+        tk_message_font = tkfont.Font(
+            family=message_font.actual("family"),
+            size=message_font.actual("size"),
+            weight=message_font.actual("weight"),
+        )
+        line_height = max(tk_message_font.metrics("linespace"), 1)
+
+        max_window_width = min(self.winfo_screenwidth() - 160, 720)
+        min_window_width = compact_button_width + 2 * (DIALOG_PAD_X + DIALOG_SECTION_GAP)
+        if max_window_width < min_window_width:
+            max_window_width = min_window_width
+
+        available_width = max(
+            max_window_width - 2 * (DIALOG_PAD_X + DIALOG_SECTION_GAP),
+            compact_button_width,
+        )
+
+        lines = message.splitlines() if message else []
+        if not lines:
+            lines = [""]
+        line_widths = [tk_message_font.measure(line) for line in lines]
+        max_line_width = max(line_widths) if any(width > 0 for width in line_widths) else tk_message_font.measure(" ")
+        if max_line_width <= 0:
+            max_line_width = 1
+
         use_scrollable = len(message) > 400 or message.count("\n") >= 6
         content_widget: tk.Widget
 
@@ -2147,6 +2179,28 @@ class Application(tk.Tk):
             )
             textbox.insert("1.0", message)
             textbox.configure(state="disabled")
+            target_content_width = min(
+                available_width,
+                max(max_line_width, compact_button_width),
+            )
+            textbox.configure(width=int(target_content_width))
+
+            approx_wrapped_lines = 0
+            for width in line_widths:
+                effective_width = max(width, 1)
+                approx_wrapped_lines += max(
+                    1,
+                    math.ceil(effective_width / max(target_content_width, 1)),
+                )
+            visible_lines = min(max(approx_wrapped_lines, 6), 18)
+            target_content_height = max(
+                line_height * 4,
+                min(
+                    self.winfo_screenheight() - 240,
+                    visible_lines * line_height + DIALOG_SECTION_GAP,
+                ),
+            )
+            textbox.configure(height=int(target_content_height))
             textbox.grid(row=0, column=0, sticky="nsew")
 
             scrollbar = ctk.CTkScrollbar(
@@ -2182,13 +2236,13 @@ class Application(tk.Tk):
                 anchor="center",
             )
             label.grid(row=0, column=0, sticky="nsew", padx=DIALOG_SECTION_GAP)
+            target_wraplength = min(
+                available_width,
+                max(max_line_width + DIALOG_SECTION_GAP, compact_button_width),
+            )
+            label.configure(wraplength=int(target_wraplength))
             content_widget = label
 
-        compact_button_width = max(
-            min(self.button_width, 280),
-            int(self.button_height * 2.5),
-            160,
-        )
         button_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
         button_container.grid(row=1, column=0, sticky="ew", pady=(DIALOG_SMALL_GAP, 0))
         button_container.grid_columnconfigure(0, weight=1)
@@ -2212,13 +2266,7 @@ class Application(tk.Tk):
         close_button.grid(row=0, column=1)
         self._apply_button_hover_effect(close_button)
 
-        # ограничим перенос текста, потом отдадим размер менеджеру геометрии
-        max_width = min(self.winfo_screenwidth() - 160, 720)
-        if isinstance(content_widget, ctk.CTkLabel):
-            content_widget.configure(wraplength=max_width - 80)
-            popup.update_idletasks()
-
-        # никаких ручных minsize/geometry — берём запрошенный размер и центрируем
+        # Размер окна теперь основывается на реальном размере текста/бокса
         self._finalize_dialog_window(popup, relative_to=self)
 
     def load_config(self):
