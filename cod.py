@@ -32,6 +32,38 @@ from rulate_uploader import upload_chapters
 UI_RADIUS = 18  # единый радиус для всех кнопок и полей в диалогах
 
 
+def resource_path(rel_path: str) -> str:
+    """Путь к ресурсам и в .py, и в собранном .exe (PyInstaller)."""
+    import sys, os
+
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, rel_path)
+    return os.path.join(os.path.dirname(__file__), rel_path)
+
+
+def apply_app_icon_all(root) -> None:
+    """Ставит иконку главному окну и по умолчанию всем будущим диалогам."""
+    from PIL import Image, ImageTk
+    import tkinter as tk
+
+    ico_path = resource_path("assets/icons/app.ico")
+
+    # заголовок окна/таскбар
+    try:
+        root.iconbitmap(ico_path)
+    except Exception:
+        pass
+
+    # default-иконка для всех Toplevel
+    try:
+        img = Image.open(ico_path)
+        _photo = ImageTk.PhotoImage(img)
+        root.iconphoto(True, _photo)
+        root._iconphoto_keep = _photo  # чтобы GC не удалил
+    except Exception:
+        pass
+
+
 def split_document(
     file_path: str,
     directory_getter: Callable[..., str] | None = None,
@@ -611,14 +643,6 @@ class CustomInputDialog(ctk.CTkToplevel):
         if entry_height:
             self._entry.configure(height=entry_height)
 
-        try:
-            entry_corner_radius = int(self._entry.cget("corner_radius"))
-        except (TypeError, ValueError):
-            entry_corner_radius = getattr(master, "entry_corner_radius", 12)
-
-        master_entry_radius = getattr(master, "entry_corner_radius", entry_corner_radius)
-        entry_corner_radius = max(entry_corner_radius, master_entry_radius)
-
         button_frame = ctk.CTkFrame(content, fg_color="#2f2f2f")
         button_frame.grid(row=2, column=0, sticky="ew")
         button_frame.grid_columnconfigure(0, weight=1)
@@ -633,10 +657,7 @@ class CustomInputDialog(ctk.CTkToplevel):
             int(base_button_height * 2.2),
             110,
         )
-        button_corner_radius = max(
-            entry_corner_radius,
-            getattr(master, "button_corner_radius", entry_corner_radius),
-        )
+        button_corner_radius = getattr(master, "entry_corner_radius", 12)
 
         self._ok_button = ctk.CTkButton(
             button_frame,
@@ -1411,11 +1432,14 @@ class Application(tk.Tk):
         self._apply_window_icon(popup)
         popup.title("")
         popup.transient(self)
+        popup.grid_columnconfigure(0, weight=1)
+        popup.grid_rowconfigure(0, weight=1)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        content.pack(
-            fill="both",
-            expand=True,
+        content.grid(
+            row=0,
+            column=0,
+            sticky="nsew",
             padx=DIALOG_PAD_X,
             pady=DIALOG_PAD_Y,
         )
@@ -1535,11 +1559,14 @@ class Application(tk.Tk):
         self._apply_window_icon(popup)
         popup.title("")
         popup.transient(self)
+        popup.grid_columnconfigure(0, weight=1)
+        popup.grid_rowconfigure(0, weight=1)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        content.pack(
-            fill="both",
-            expand=True,
+        content.grid(
+            row=0,
+            column=0,
+            sticky="nsew",
             padx=DIALOG_PAD_X,
             pady=DIALOG_PAD_Y,
         )
@@ -1657,11 +1684,14 @@ class Application(tk.Tk):
         self._apply_window_icon(popup)
         popup.title("")
         popup.transient(self)
+        popup.grid_columnconfigure(0, weight=1)
+        popup.grid_rowconfigure(0, weight=1)
 
         content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
-        content.pack(
-            fill="both",
-            expand=True,
+        content.grid(
+            row=0,
+            column=0,
+            sticky="nsew",
             padx=DIALOG_PAD_X,
             pady=DIALOG_PAD_Y,
         )
@@ -1796,10 +1826,13 @@ class Application(tk.Tk):
         self._apply_window_icon(dialog)
         dialog.title("")
         dialog.transient(self)
+        dialog.grid_columnconfigure(0, weight=1)
+        dialog.grid_rowconfigure(0, weight=1)
         content = ctk.CTkFrame(dialog, fg_color="#2f2f2f")
-        content.pack(
-            fill="both",
-            expand=True,
+        content.grid(
+            row=0,
+            column=0,
+            sticky="nsew",
             padx=DIALOG_PAD_X,
             pady=DIALOG_PAD_Y,
         )
@@ -2275,22 +2308,8 @@ class Application(tk.Tk):
         )
         close_button.grid(row=0, column=1)
         self._apply_button_hover_effect(close_button)
-
-        # Размер окна теперь основывается на реальном размере текста/бокса
         popup.update_idletasks()
-        required_width = max(
-            popup.winfo_reqwidth(),
-            int(
-                math.ceil(
-                    measured_content_width + 2 * (DIALOG_PAD_X + DIALOG_SECTION_GAP)
-                )
-            ),
-        )
-        self._finalize_dialog_window(
-            popup,
-            min_width=int(required_width),
-            relative_to=self,
-        )
+        self._finalize_dialog_window(popup, relative_to=self)
 
     def load_config(self):
         config = {}
@@ -2314,4 +2333,5 @@ class Application(tk.Tk):
 
 if __name__ == "__main__":
     app = Application()
+    apply_app_icon_all(app)  # иконка для главного и всех диалогов
     app.mainloop()
