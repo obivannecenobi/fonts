@@ -2124,11 +2124,7 @@ class Application(tk.Tk):
             weight="bold",
         )
 
-        compact_button_width = max(
-            min(self.button_width, 280),
-            int(self.button_height * 2.5),
-            160,
-        )
+        compact_button_width = max(int(self.button_height * 2.4), 140)
 
         tk_message_font = tkfont.Font(
             family=message_font.actual("family"),
@@ -2158,6 +2154,8 @@ class Application(tk.Tk):
         use_scrollable = len(message) > 400 or message.count("\n") >= 6
         content_widget: tk.Widget
 
+        measured_content_width = compact_button_width
+
         if use_scrollable:
             content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
             content_container.grid(
@@ -2184,6 +2182,9 @@ class Application(tk.Tk):
                 max(max_line_width, compact_button_width),
             )
             textbox.configure(width=int(target_content_width))
+            content_container.grid_columnconfigure(
+                0, minsize=int(math.ceil(target_content_width))
+            )
 
             approx_wrapped_lines = 0
             for width in line_widths:
@@ -2216,6 +2217,11 @@ class Application(tk.Tk):
             )
             textbox.configure(yscrollcommand=scrollbar.set)
             content_widget = textbox
+            scrollbar.update_idletasks()
+            measured_content_width = max(
+                measured_content_width,
+                target_content_width + scrollbar.winfo_reqwidth() + DIALOG_SCROLLBAR_GAP,
+            )
         else:
             content_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
             content_container.grid(
@@ -2236,12 +2242,16 @@ class Application(tk.Tk):
                 anchor="center",
             )
             label.grid(row=0, column=0, sticky="nsew", padx=DIALOG_SECTION_GAP)
-            target_wraplength = min(
+            target_content_width = min(
                 available_width,
-                max(max_line_width + DIALOG_SECTION_GAP, compact_button_width),
+                max(max_line_width, compact_button_width),
             )
-            label.configure(wraplength=int(target_wraplength))
+            label.configure(wraplength=int(target_content_width))
+            content_container.grid_columnconfigure(
+                0, minsize=int(math.ceil(target_content_width))
+            )
             content_widget = label
+            measured_content_width = max(measured_content_width, target_content_width)
 
         button_container = ctk.CTkFrame(frame, fg_color="#2f2f2f")
         button_container.grid(row=1, column=0, sticky="ew", pady=(DIALOG_SMALL_GAP, 0))
@@ -2267,7 +2277,20 @@ class Application(tk.Tk):
         self._apply_button_hover_effect(close_button)
 
         # Размер окна теперь основывается на реальном размере текста/бокса
-        self._finalize_dialog_window(popup, relative_to=self)
+        popup.update_idletasks()
+        required_width = max(
+            popup.winfo_reqwidth(),
+            int(
+                math.ceil(
+                    measured_content_width + 2 * (DIALOG_PAD_X + DIALOG_SECTION_GAP)
+                )
+            ),
+        )
+        self._finalize_dialog_window(
+            popup,
+            min_width=int(required_width),
+            relative_to=self,
+        )
 
     def load_config(self):
         config = {}
