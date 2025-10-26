@@ -5,3 +5,4 @@ customtkinter
 pytest
 selenium
 webdriver-manager
+language-tool-python
