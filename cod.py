@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import re
+import threading
 import tkinter as tk
 from collections import Counter, OrderedDict
 from pathlib import Path
@@ -23,13 +24,45 @@ from docx import Document
 from docx.oxml.ns import nsmap, qn
 from docx.text.paragraph import Paragraph
 from importlib import import_module, util
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple
 
 from PIL import Image, ImageTk
 
 from rulate_uploader import upload_chapters
 
+try:  # Optional dependency, used for орфография/пунктуация checks
+    import language_tool_python
+except ImportError:  # pragma: no cover - module is optional at runtime
+    language_tool_python = None
+
+if TYPE_CHECKING:  # pragma: no cover - imported only for type checking
+    from language_tool_python import LanguageTool, Match
+
 UI_RADIUS = 18  # единый радиус для всех кнопок и полей в диалогах
+
+
+_LANGUAGE_TOOL: Optional["LanguageTool"] = None
+_LANGUAGE_TOOL_LOCK = threading.Lock()
+
+
+def _get_language_tool() -> "LanguageTool":
+    """Return cached instance of LanguageTool for Russian locale."""
+
+    if language_tool_python is None:  # pragma: no cover - optional runtime dependency
+        raise ImportError(
+            "Библиотека language-tool-python не установлена. Установите её через pip"
+        )
+
+    global _LANGUAGE_TOOL
+    with _LANGUAGE_TOOL_LOCK:
+        if _LANGUAGE_TOOL is None:
+            try:
+                _LANGUAGE_TOOL = language_tool_python.LanguageTool("ru-RU")
+            except Exception as exc:  # noqa: BLE001 - surface error to the caller
+                raise RuntimeError(
+                    "Не удалось инициализировать LanguageTool. Проверьте наличие Java"
+                ) from exc
+    return _LANGUAGE_TOOL
 
 
 def resource_path(rel_path: str) -> str:
@@ -133,8 +166,55 @@ def split_document(
     return created_files
 
 
-def split_chapters_into_two(file_path: str, output_dir: str) -> Tuple[List[str], List[str]]:
-    """Split each detected chapter into two separate documents."""
+def _split_paragraphs_evenly(
+    paragraphs: List[Paragraph], parts: int
+) -> Optional[List[List[Paragraph]]]:
+    """Split paragraphs into *parts* segments with roughly equal text volume."""
+
+    if parts < 2 or len(paragraphs) < parts:
+        return None
+
+    weights = [max(len(par.text.strip()), 1) for par in paragraphs]
+    total_weight = sum(weights)
+    if total_weight <= 0:
+        return None
+
+    target = total_weight / parts
+    segments: List[List[Paragraph]] = []
+    current_segment: List[Paragraph] = []
+    current_weight = 0
+
+    for index, paragraph in enumerate(paragraphs):
+        weight = weights[index]
+        current_segment.append(paragraph)
+        current_weight += weight
+
+        remaining_paragraphs = len(paragraphs) - index - 1
+        remaining_parts = parts - len(segments) - 1
+
+        if remaining_parts <= 0:
+            continue
+
+        if current_weight >= target and remaining_paragraphs >= remaining_parts:
+            segments.append(current_segment)
+            current_segment = []
+            current_weight = 0
+
+    if len(segments) != parts - 1 or not current_segment:
+        return None
+
+    segments.append(current_segment)
+
+    if any(len(segment) == 0 for segment in segments):
+        return None
+
+    return segments
+
+
+def split_chapters_into_parts(
+    file_path: str, output_dir: str, parts: int
+) -> Tuple[List[str], List[str]]:
+    """Split each detected chapter into *parts* separate documents."""
 
     heading_pattern = re.compile(r"^Глава\s+(\d+)(?:\.(\d+))?", re.IGNORECASE)
     document = Document(file_path)
@@ -158,38 +238,15 @@ def split_chapters_into_two(file_path: str, output_dir: str) -> Tuple[List[str],
             element.getparent().remove(element)
 
     def _save_split(label: str, paragraphs: List[Paragraph]) -> None:
-        if len(paragraphs) < 2:
+        segments = _split_paragraphs_evenly(paragraphs, parts)
+        if not segments:
             skipped_chapters.append(label)
             return
 
-        weights = [max(len(p.text.strip()), 1) for p in paragraphs]
-        total_weight = sum(weights)
-        target = total_weight / 2
-        cumulative = 0
-        split_index = len(paragraphs) // 2
-
-        for index, weight in enumerate(weights, start=1):
-            cumulative += weight
-            if cumulative >= target:
-                split_index = index
-                break
-
-        if split_index >= len(paragraphs):
-            split_index = len(paragraphs) - 1
-        if split_index <= 0:
-            split_index = 1
-
-        first_part = paragraphs[:split_index]
-        second_part = paragraphs[split_index:]
-
-        if not second_part:
-            skipped_chapters.append(label)
-            return
-
-        for part_index, part in enumerate((first_part, second_part), start=1):
+        for part_index, segment in enumerate(segments, start=1):
             new_doc = Document()
             _clear_document(new_doc)
-            for paragraph in part:
+            for paragraph in segment:
                 new_doc._element.body.append(copy.deepcopy(paragraph._element))
 
             chapter_name = f"Глава {label}.{part_index}"
@@ -219,6 +276,141 @@ def split_chapters_into_two(file_path: str, output_dir: str) -> Tuple[List[str],
         _save_split(current_label, current_paragraphs)
 
     return created_files, skipped_chapters
+
+
+def split_chapters_into_two(
+    file_path: str, output_dir: str
+) -> Tuple[List[str], List[str]]:
+    """Split each detected chapter into two separate documents."""
+
+    return split_chapters_into_parts(file_path, output_dir, 2)
+
+
+def _match_is_punctuation(match: "Match") -> bool:
+    category = getattr(match, "category", None)
+    category_id = getattr(category, "id", "") if category is not None else ""
+    rule_id = getattr(match, "ruleId", "")
+    rule_issue = getattr(match, "ruleIssueType", "")
+    return (
+        "PUNCT" in category_id.upper()
+        or "PUNCT" in rule_id.upper()
+        or rule_issue.lower() in {"typographical", "punctuation"}
+    )
+
+
+def _match_is_spelling(match: "Match") -> bool:
+    rule_issue = getattr(match, "ruleIssueType", "")
+    category = getattr(match, "category", None)
+    category_id = getattr(category, "id", "") if category is not None else ""
+    return rule_issue.lower() in {"misspelling", "typographical"} or "SPELL" in category_id.upper()
+
+
+def _collect_language_issues(
+    tool: "LanguageTool",
+    document: Document,
+    match_filter: Callable[["Match"], bool],
+) -> Tuple[List[Dict[str, Any]], Dict[int, List[Dict[str, Any]]]]:
+    """Collect language-tool matches for *document* filtered by *match_filter*."""
+
+    issues: List[Dict[str, Any]] = []
+    fix_plan: Dict[int, List[Dict[str, Any]]] = {}
+
+    for index, paragraph in enumerate(document.paragraphs):
+        text = paragraph.text
+        if not text.strip():
+            continue
+
+        matches = tool.check(text)
+        replacements_for_paragraph: List[Dict[str, Any]] = []
+        seen_positions: Set[Tuple[int, int]] = set()
+
+        for match in matches:
+            if not match_filter(match):
+                continue
+
+            offset = getattr(match, "offset", 0)
+            length = getattr(match, "errorLength", 0)
+            key = (offset, length)
+            if key in seen_positions:
+                continue
+            seen_positions.add(key)
+
+            replacements = [
+                suggestion
+                for suggestion in getattr(match, "replacements", [])
+                if suggestion.strip()
+            ]
+            context = getattr(match, "context", text)
+            context_offset = getattr(match, "contextOffset", offset)
+            error_fragment = context[context_offset : context_offset + length]
+            if not error_fragment and length:
+                error_fragment = text[offset : offset + length]
+
+            issues.append(
+                {
+                    "paragraph_index": index,
+                    "paragraph_number": index + 1,
+                    "message": getattr(match, "message", ""),
+                    "error": error_fragment or context.strip() or text.strip(),
+                    "context": context.strip() or text.strip(),
+                    "suggestions": replacements,
+                }
+            )
+
+            if replacements:
+                replacements_for_paragraph.append(
+                    {
+                        "offset": offset,
+                        "length": length,
+                        "replacement": replacements[0],
+                    }
+                )
+
+        if replacements_for_paragraph:
+            fix_plan[index] = replacements_for_paragraph
+
+    return issues, fix_plan
+
+
+def _apply_language_fixes(
+    document: Document, fix_plan: Dict[int, List[Dict[str, Any]]]
+) -> Tuple[int, int]:
+    """Apply replacements stored in *fix_plan* to *document* paragraphs."""
+
+    applied = 0
+    skipped = 0
+
+    for index, replacements in fix_plan.items():
+        if index >= len(document.paragraphs):
+            continue
+
+        paragraph = document.paragraphs[index]
+        text = paragraph.text
+        updated = text
+
+        for replacement in sorted(
+            replacements, key=lambda item: item["offset"], reverse=True
+        ):
+            repl_text = replacement.get("replacement", "")
+            if repl_text is None:
+                skipped += 1
+                continue
+
+            offset = max(replacement.get("offset", 0), 0)
+            length = max(replacement.get("length", 0), 0)
+
+            if offset > len(updated):
+                skipped += 1
+                continue
+
+            end_index = offset + length
+            updated = updated[:offset] + repl_text + updated[end_index:]
+            applied += 1
+
+        if updated != text:
+            paragraph.text = updated
+
+    return applied, skipped
 
 
 def check_english_words(file_path: str) -> Dict[str, List[Tuple[int, int]]]:
@@ -780,16 +972,20 @@ class Application(tk.Tk):
         )
 
         # Регистрация и настройка шрифта
-        if sys.platform.startswith("win"):
-            ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
-            font_family = "Cattedrale [RUS by penka220]"
-        else:
-            # На системах Unix пытаемся зарегистрировать шрифт через tkfont.
-            # Если это невозможно, используем системный шрифт по умолчанию.
-            try:
-                self._loaded_font = tkfont.Font(file=font_path)
-                font_family = self._loaded_font.actual("family")
-            except tk.TclError:
+        font_family: Optional[str] = None
+        self._loaded_font: Optional[tkfont.Font] = None
+        try:
+            self._loaded_font = tkfont.Font(file=font_path)
+            font_family = self._loaded_font.actual("family")
+        except tk.TclError:
+            if sys.platform.startswith("win"):
+                try:
+                    ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
+                    ctypes.windll.user32.SendMessageW(0xFFFF, 0x001D, 0, 0)
+                    font_family = "Cattedrale [RUS by penka220]"
+                except Exception:
+                    font_family = None
+            if not font_family:
                 font_family = tkfont.nametofont("TkDefaultFont").actual("family")
         default_font = tkfont.nametofont("TkDefaultFont")
         base_size = default_font.cget("size") + 6
@@ -963,6 +1159,40 @@ class Application(tk.Tk):
         self.artifacts_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.artifacts_button)
 
+        self.punctuation_button = ctk.CTkButton(
+            fix_group,
+            text="Пунктуация",
+            command=self.check_punctuation,
+            corner_radius=self.button_corner_radius,
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
+            bg_color="#2f2f2f",
+            text_color=self.button_text_color,
+            border_width=self.button_border_width,
+            font=self.custom_font,
+            height=self.button_height,
+            width=self.button_width,
+        )
+        self.punctuation_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.punctuation_button)
+
+        self.spelling_button = ctk.CTkButton(
+            fix_group,
+            text="Орфография",
+            command=self.check_spelling,
+            corner_radius=self.button_corner_radius,
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
+            bg_color="#2f2f2f",
+            text_color=self.button_text_color,
+            border_width=self.button_border_width,
+            font=self.custom_font,
+            height=self.button_height,
+            width=self.button_width,
+        )
+        self.spelling_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.spelling_button)
+
         self.split_even_button = ctk.CTkButton(
             fix_group,
             text="Разделить",
@@ -979,6 +1209,23 @@ class Application(tk.Tk):
         )
         self.split_even_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.split_even_button)
+
+        self.split_custom_button = ctk.CTkButton(
+            fix_group,
+            text="Делим на",
+            command=self.split_chapters_custom,
+            corner_radius=self.button_corner_radius,
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
+            bg_color="#2f2f2f",
+            text_color=self.button_text_color,
+            border_width=self.button_border_width,
+            font=self.custom_font,
+            height=self.button_height,
+            width=self.button_width,
+        )
+        self.split_custom_button.pack(pady=(0, 8))
+        self._apply_button_hover_effect(self.split_custom_button)
 
         self.split_button = ctk.CTkButton(
             fix_group,
@@ -1225,11 +1472,10 @@ class Application(tk.Tk):
         dialog_parent.withdraw()
         dialog_parent.overrideredirect(True)
         dialog_parent.geometry("1x1")
-        dialog_parent.attributes("-alpha", 0.0)
         self._apply_window_icon(dialog_parent)
         dialog_parent.update_idletasks()
         self._center_window(dialog_parent, relative_to=self)
-        dialog_parent.deiconify()
+        dialog_parent.transient(self)
         dialog_parent.lift()
         dialog_parent.update_idletasks()
         return dialog_parent
@@ -1250,6 +1496,194 @@ class Application(tk.Tk):
         finally:
             dialog_parent.destroy()
         return selection or ""
+
+    def _run_language_check(
+        self,
+        *,
+        title: str,
+        filter_func: Callable[["Match"], bool],
+        empty_message: str,
+    ) -> None:
+        file_path = self._show_file_dialog(
+            filedialog.askopenfilename,
+            title="Выберите документ",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not file_path:
+            return
+
+        try:
+            tool = _get_language_tool()
+        except (ImportError, RuntimeError) as exc:
+            self.show_error(str(exc))
+            return
+
+        try:
+            document = Document(file_path)
+        except Exception as exc:  # noqa: BLE001 - показать ошибку пользователю
+            self.show_error(f"Не удалось открыть документ: {exc}")
+            return
+
+        try:
+            issues, fix_plan = _collect_language_issues(tool, document, filter_func)
+        except Exception as exc:  # noqa: BLE001 - поверхностный показ ошибки
+            self.show_error(f"Не удалось выполнить проверку: {exc}")
+            return
+
+        if not issues:
+            self.show_popup(empty_message)
+            return
+
+        self._show_language_issues_popup(
+            title=title,
+            file_path=file_path,
+            document=document,
+            issues=issues,
+            fix_plan=fix_plan,
+        )
+
+    def _show_language_issues_popup(
+        self,
+        *,
+        title: str,
+        file_path: str,
+        document: Document,
+        issues: List[Dict[str, Any]],
+        fix_plan: Dict[int, List[Dict[str, Any]]],
+    ) -> None:
+        popup = ctk.CTkToplevel(self, fg_color="#2f2f2f")
+        self._apply_window_icon(popup)
+        popup.title("")
+        popup.transient(self)
+        popup.grid_columnconfigure(0, weight=1)
+        popup.grid_rowconfigure(0, weight=1)
+
+        content = ctk.CTkFrame(popup, fg_color="#2f2f2f")
+        content.grid(
+            row=0,
+            column=0,
+            sticky="nsew",
+            padx=DIALOG_PAD_X,
+            pady=DIALOG_PAD_Y,
+        )
+        content.grid_rowconfigure(2, weight=1)
+        content.grid_columnconfigure(0, weight=1)
+
+        header = ctk.CTkLabel(
+            content,
+            text=f"{title}. Найдено {len(issues)} проблем(ы).",
+            text_color="#eeeeee",
+            font=self.custom_font,
+            anchor="w",
+            justify="left",
+        )
+        header.grid(row=0, column=0, sticky="ew", pady=(0, DIALOG_SECTION_GAP))
+
+        columns = ("paragraph", "fragment", "message", "suggestions")
+        tree = ttk.Treeview(content, columns=columns, show="headings")
+        tree.heading("paragraph", text="№")
+        tree.heading("fragment", text="Фрагмент")
+        tree.heading("message", text="Описание")
+        tree.heading("suggestions", text="Предложение")
+        tree.column("paragraph", width=60, anchor="center")
+        tree.column("fragment", anchor="w", width=220)
+        tree.column("message", anchor="w", width=260)
+        tree.column("suggestions", anchor="w", width=220)
+
+        for issue in issues:
+            fragment = re.sub(r"\s+", " ", issue.get("error", "")).strip()
+            if len(fragment) > 120:
+                fragment = fragment[:117] + "…"
+            message = re.sub(r"\s+", " ", issue.get("message", "")).strip()
+            if len(message) > 160:
+                message = message[:157] + "…"
+            suggestions = issue.get("suggestions", [])
+            suggestion_text = ", ".join(suggestions) if suggestions else "—"
+            if len(suggestion_text) > 120:
+                suggestion_text = suggestion_text[:117] + "…"
+
+            tree.insert(
+                "",
+                "end",
+                values=(
+                    issue.get("paragraph_number", ""),
+                    fragment or "—",
+                    message or "—",
+                    suggestion_text or "—",
+                ),
+            )
+
+        tree.grid(row=1, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(content, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar.grid(
+            row=1,
+            column=1,
+            sticky="ns",
+            padx=(DIALOG_SCROLLBAR_GAP, 0),
+        )
+
+        button_row = ctk.CTkFrame(content, fg_color="#2f2f2f")
+        button_row.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(DIALOG_SECTION_GAP, 0))
+        button_row.grid_columnconfigure(0, weight=1)
+        button_row.grid_columnconfigure(1, weight=1)
+
+        def apply_all() -> None:
+            applied, skipped = _apply_language_fixes(document, fix_plan)
+            try:
+                if applied:
+                    document.save(file_path)
+            except Exception as exc:  # noqa: BLE001 - показать пользователю
+                popup.destroy()
+                self.show_error(f"Не удалось сохранить изменения: {exc}")
+                return
+
+            popup.destroy()
+
+            if applied:
+                message = f"Исправлено {applied} ошибок."
+                if skipped:
+                    message += f"\nПропущено: {skipped}."
+                self.show_popup(message)
+            else:
+                self.show_popup("Нет исправлений, доступных для автоматической замены.")
+
+        fix_button = ctk.CTkButton(
+            button_row,
+            text="Исправить всё",
+            command=apply_all,
+            corner_radius=self.button_corner_radius,
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
+            bg_color="#2f2f2f",
+            text_color=self.button_text_color,
+            border_width=self.button_border_width,
+            font=self.custom_font,
+            height=self.button_height,
+            width=self.button_width,
+        )
+        fix_button.grid(row=0, column=0, sticky="ew", padx=(0, DIALOG_BUTTON_GAP))
+        self._apply_button_hover_effect(fix_button)
+
+        close_button = ctk.CTkButton(
+            button_row,
+            text="Закрыть",
+            command=popup.destroy,
+            corner_radius=self.button_corner_radius,
+            fg_color=self.button_fg_color,
+            hover_color=self.button_hover_color,
+            bg_color="#2f2f2f",
+            text_color=self.button_text_color,
+            border_width=self.button_border_width,
+            font=self.custom_font,
+            height=self.button_height,
+            width=self.button_width,
+        )
+        close_button.grid(row=0, column=1, sticky="ew")
+        self._apply_button_hover_effect(close_button)
+
+        self._finalize_dialog_window(popup, min_width=640, min_height=420, relative_to=self)
+
 
     def _add_separator(self, parent: tk.Widget) -> None:
         container = tk.Frame(parent, bg="#2f2f2f")
@@ -1358,6 +1792,60 @@ class Application(tk.Tk):
 
         self.show_message("\n".join(message_lines))
 
+    def split_chapters_custom(self):
+        file_path = self._show_file_dialog(
+            filedialog.askopenfilename,
+            title="Выберите документ",
+            filetypes=[("Word Documents", "*.docx")],
+        )
+        if not file_path:
+            return
+
+        parts_dialog = CustomInputDialog(
+            self,
+            "На сколько частей делим? (3, 4 или 5)",
+            self.custom_font,
+            self.icon_path,
+            self.icon_photo,
+        )
+        parts_value = parts_dialog.get_input()
+        if parts_value is None:
+            return
+
+        try:
+            parts = int(parts_value)
+        except ValueError:
+            self.show_error("Введите число 3, 4 или 5.")
+            return
+
+        if parts not in {3, 4, 5}:
+            self.show_error("Доступны только варианты 3, 4 или 5 частей.")
+            return
+
+        output_dir = self._ask_directory(
+            title="Выберите папку для сохранения",
+            initialdir=os.path.dirname(file_path),
+        )
+        if not output_dir:
+            self.show_error("Папка для сохранения не выбрана.")
+            return
+
+        created, skipped = split_chapters_into_parts(file_path, output_dir, parts)
+
+        if not created:
+            message = f"Не удалось разделить главы на {parts} част(и/ей)."
+            if skipped:
+                message += "\n" + "\n".join(f"Глава {label}" for label in skipped)
+            self.show_error(message)
+            return
+
+        message_lines = [f"Создано {len(created)} файлов"]
+        if skipped:
+            skipped_text = ", ".join(f"Глава {label}" for label in skipped)
+            message_lines.append(f"Не удалось разделить: {skipped_text}")
+
+        self.show_message("\n".join(message_lines))
+
     def convert_docx_to_fb2(self):
         if util.find_spec("fb2_converter") is None:
             self.show_error(
@@ -1412,6 +1900,20 @@ class Application(tk.Tk):
             self.show_popup(
                 f"Не удалось сконвертировать:\n{failed_lines}", color="#ff0000"
             )
+
+    def check_punctuation(self):
+        self._run_language_check(
+            title="Пунктуация",
+            filter_func=_match_is_punctuation,
+            empty_message="Пунктуационных ошибок не найдено.",
+        )
+
+    def check_spelling(self):
+        self._run_language_check(
+            title="Орфография",
+            filter_func=_match_is_spelling,
+            empty_message="Орфографических ошибок не найдено.",
+        )
 
     def check_english_words(self):
         file_path = self._show_file_dialog(
