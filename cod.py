@@ -1159,40 +1159,6 @@ class Application(tk.Tk):
         self.artifacts_button.pack(pady=(0, 8))
         self._apply_button_hover_effect(self.artifacts_button)
 
-        self.punctuation_button = ctk.CTkButton(
-            fix_group,
-            text="Пунктуация",
-            command=self.check_punctuation,
-            corner_radius=self.button_corner_radius,
-            fg_color=self.button_fg_color,
-            hover_color=self.button_hover_color,
-            bg_color="#2f2f2f",
-            text_color=self.button_text_color,
-            border_width=self.button_border_width,
-            font=self.custom_font,
-            height=self.button_height,
-            width=self.button_width,
-        )
-        self.punctuation_button.pack(pady=(0, 8))
-        self._apply_button_hover_effect(self.punctuation_button)
-
-        self.spelling_button = ctk.CTkButton(
-            fix_group,
-            text="Орфография",
-            command=self.check_spelling,
-            corner_radius=self.button_corner_radius,
-            fg_color=self.button_fg_color,
-            hover_color=self.button_hover_color,
-            bg_color="#2f2f2f",
-            text_color=self.button_text_color,
-            border_width=self.button_border_width,
-            font=self.custom_font,
-            height=self.button_height,
-            width=self.button_width,
-        )
-        self.spelling_button.pack(pady=(0, 8))
-        self._apply_button_hover_effect(self.spelling_button)
-
         self.split_even_button = ctk.CTkButton(
             fix_group,
             text="Разделить",
